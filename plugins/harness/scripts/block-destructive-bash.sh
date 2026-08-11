@@ -94,13 +94,36 @@ print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permission
   exit 0
 }
 
-# --- git push --force / -f (allow --force-with-lease) ---
+# --- git push force variants (only --force-with-lease, on its own, is allowed) ---
+# Three ways to force-push, all covered here:
+#   1. --force / -f
+#   2. --force-with-lease PLUS a bare --force — git honours the --force and the lease
+#      does not protect anything, so the lease must not mask the force test. Strip every
+#      --force-with-lease[=<ref>] token FIRST, then test what remains.
+#   3. a `+`-prefixed refspec (`git push origin +main`, `+refs/heads/x:refs/heads/x`) —
+#      a force push with no --force flag anywhere in the command.
 if printf '%s' "$cmd" | grep -Eq '\bgit\b.*\bpush\b'; then
-  if ! printf '%s' "$cmd" | grep -Eq -- '--force-with-lease\b'; then
-    if printf '%s' "$cmd" | grep -Eq -- '(--force\b|(^|[[:space:]])-f\b)'; then
-      deny "Blocked by harness policy: git push --force/-f is disallowed. Use --force-with-lease if a force-push is truly required, never on the default branch, and confirm with the owner first."
-    fi
+  push_force_msg="Blocked by harness policy: force-pushing (--force/-f, --force-with-lease combined with --force, or a +refspec) is disallowed. Use --force-with-lease on its own if a force-push is truly required, never on the default branch, and confirm with the owner first."
+
+  deleased=$(printf '%s' "$cmd" | sed -E 's/--force-with-lease(=[^[:space:]]*)?//g')
+  if printf '%s' "$deleased" | grep -Eq -- '(--force\b|(^|[[:space:]])-f\b)'; then
+    deny "$push_force_msg"
   fi
+
+  # +refspec: only inspect tokens AFTER the `push` subcommand, so an unrelated `+` token
+  # earlier in a chained command doesn't false-positive.
+  seen_push=0
+  for tok in $cmd; do
+    if [ "$seen_push" -eq 0 ]; then
+      case "$tok" in
+        push) seen_push=1 ;;
+      esac
+      continue
+    fi
+    case "$tok" in
+      +*) deny "$push_force_msg" ;;
+    esac
+  done
 fi
 
 # --- git reset --hard ---
