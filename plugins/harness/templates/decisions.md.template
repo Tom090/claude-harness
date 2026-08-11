@@ -12,5 +12,8 @@ project's memory across agent sessions; see `CLAUDE.md` § Resuming. Written by
   destructive-bash blocker, test-weakening diff guard — configured via
   `.claude/harness.env`, verified with synthetic triggers (see PR / session notes for
   the verification transcript).
+- This project's path was added to `~/.config/claude-harness/trusted-projects` so the
+  Stop gate is allowed to run its test command. That file is machine-local: a clone on
+  another machine must repeat that step or the gate stays inert (by design).
 - Owner-Telegram bridge: {{TELEGRAM_STATUS}}.
 - GitHub setup: {{GITHUB_SETUP_SUMMARY}}.

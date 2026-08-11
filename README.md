@@ -69,6 +69,18 @@ installing the plugin is safe before you've decided anything about a given repo.
 file exists the blocker is live; the Stop gate additionally needs `TEST_COMMAND`, and
 `BUILD_RELEVANT_PATTERNS` is what keeps it off docs-only sessions.
 
+## Trust model
+
+The Stop gate runs the `TEST_COMMAND` written in a project's `.claude/harness.env` — a
+file that lives inside the repo. That file alone never grants execution: the gate also
+requires the project's absolute path to be listed in
+`~/.config/claude-harness/trusted-projects`, a user-level file no repo can write to, which
+`/harness:harness-init` appends when you bind a project. Cloning a hostile repo that ships
+its own `harness.env` therefore runs nothing. Both hooks read `harness.env` literally
+(plain `KEY="value"` lines) rather than sourcing it, so no value in it is ever executed as
+shell either. Untrusted projects get a one-per-day notice that the gate is inactive rather
+than silence — an inert gate you believe in is worse than no gate.
+
 ## Upstreaming improvements
 
 If a project using this harness finds a better version of a script, skill, or rule —

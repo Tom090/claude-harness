@@ -15,6 +15,11 @@ Prerequisites, check first:
   no-ops without it (see `${CLAUDE_PLUGIN_ROOT}/templates/harness.env.example`).
 - `jq` is installed (`command -v jq`). Without it the blocker falls back to `python3`,
   and without either it cannot inspect commands at all.
+- This project's absolute physical path is in `~/.config/claude-harness/trusted-projects`
+  (`grep -qxF "$(pwd -P)" ~/.config/claude-harness/trusted-projects && echo trusted`).
+  Untrusted, the Stop gate deliberately never runs `TEST_COMMAND`, and §1 below would
+  false-fail. `/harness:harness-init` adds it; add it by hand only for a project you
+  bound yourself.
 
 **Every trigger below is written to be harmless if the gate is NOT live** — a
 verification that destroys work when the thing it verifies is broken is worse than no
@@ -37,6 +42,13 @@ verification. Do not "simplify" them into real force-pushes or real deletions.
   file (nothing matching it) — the hook should exit 0 immediately, no test run at all.
   With that key unset the equivalent check is a clean working tree (nothing changed at
   all), which also skips.
+- **Also verify the untrusted path** (cheap, and worth doing once): temporarily comment
+  out this project's line in `~/.config/claude-harness/trusted-projects`, then end a turn
+  with a code change pending. **Expect** a one-line notice that the path isn't trusted and
+  the gate is inactive — a *notice*, not a block, and `TEST_COMMAND` must not run (if it
+  has an observable side effect, confirm the side effect didn't happen). A second turn
+  should be silent (the notice is once per day per project). Restore the line afterwards
+  and confirm the gate blocks again.
 
 ## 2. Destructive-bash blocker — synthetic dangerous commands
 

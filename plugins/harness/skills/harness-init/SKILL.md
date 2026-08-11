@@ -79,6 +79,18 @@ All of these go INTO the target project, not this plugin:
 ## 3. Initialize
 
 - `git init` if the directory isn't a repo yet.
+- **Trust this project for the Stop gate.** The gate executes `TEST_COMMAND` from a file
+  inside the repo, so it refuses to run until the project's absolute path is listed in a
+  USER-level trust file that no repo can write to. Do this now, or the gate stays inert:
+  ```bash
+  mkdir -p ~/.config/claude-harness
+  touch ~/.config/claude-harness/trusted-projects
+  chmod 600 ~/.config/claude-harness/trusted-projects
+  p="$(pwd -P)"    # must be the absolute PHYSICAL path — the hook compares exact lines
+  grep -qxF "$p" ~/.config/claude-harness/trusted-projects \
+    || echo "$p" >> ~/.config/claude-harness/trusted-projects
+  ```
+  Never add a path you didn't just bind yourself, and never script this for another repo.
 - `gh repo create` if there's no GitHub remote — ask private/public via
   AskUserQuestion if not already stated.
 - Labels: `agent:<role>` per generated builder plus `reviewer`/`researcher`/`wave-lead`,
@@ -106,7 +118,9 @@ until that pass has actually run and reported PASS for all three gates.
 ## 5. Checkpoint
 
 Write the seeded `docs/decisions.md` entry (step 2) recording what was set up: stack
-detected, builders generated, gates configured, Telegram status, GitHub setup summary.
+detected, builders generated, gates configured (including that this project's path was
+added to `~/.config/claude-harness/trusted-projects`, which is machine-local — a fresh
+clone on another machine must repeat that step), Telegram status, GitHub setup summary.
 Commit it.
 
 ## Closing notes (tell the user)

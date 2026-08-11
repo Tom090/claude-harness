@@ -10,6 +10,17 @@
 # written .claude/harness.env with at least TEST_COMMAND set. This is what keeps the
 # plugin safe to enable in a project before it's been bound.
 #
+# TRUST MODEL (owner ruling): TEST_COMMAND comes from a file inside the repo, and this
+# hook runs it. A repo-shipped .claude/harness.env must therefore never be enough on its
+# own — cloning a hostile repo would otherwise mean code execution at the end of the
+# first turn. Two independent conditions are required before anything is executed:
+#   1. .claude/harness.env exists in the project, and
+#   2. the project's absolute physical path is listed, one path per line, in the
+#      USER-level trust file ~/.config/claude-harness/trusted-projects (written by
+#      /harness:harness-init, outside any repo, so no repo can add itself).
+# harness.env is READ literally (KEY="value"), never sourced — reading a string is safe
+# anywhere; only the trusted-path check gates actually running it.
+#
 # .claude/harness.env keys read:
 #   TEST_COMMAND             required. e.g. "./gradlew testDebugUnitTest lintDebug" or
 #                             "npm test && npm run lint" or "cargo test && cargo clippy"
@@ -36,9 +47,31 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 cd "$PROJECT_DIR" || exit 0
 
 [ -f .claude/harness.env ] || exit 0
-# shellcheck disable=SC1091
-source .claude/harness.env
-[ -n "${TEST_COMMAND:-}" ] || exit 0
+
+# --- Read config literally; never `source` a repo-controlled file (see TRUST MODEL) ---
+harness_env_value() {
+  local key="$1" line val=""
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"                       # tolerate CRLF
+    while [ "${line# }" != "$line" ] || [ "${line#$'\t'}" != "$line" ]; do
+      line="${line# }"
+      line="${line#$'\t'}"
+    done
+    case "$line" in
+      "$key="*) ;;
+      *) continue ;;
+    esac
+    val="${line#$key=}"
+    val="${val%\"}"; val="${val#\"}"
+    val="${val%\'}"; val="${val#\'}"
+  done < .claude/harness.env
+  printf '%s' "$val"                           # last assignment wins, as `source` would
+}
+
+TEST_COMMAND="$(harness_env_value TEST_COMMAND)"
+BUILD_RELEVANT_PATTERNS="$(harness_env_value BUILD_RELEVANT_PATTERNS)"
+DEFAULT_BRANCH="$(harness_env_value DEFAULT_BRANCH)"
+[ -n "$TEST_COMMAND" ] || exit 0
 
 transcript_path=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
 [ -z "$transcript_path" ] && transcript_path="default"
@@ -73,6 +106,40 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
   fi
 fi
 # Not a git repo: no changed-file signal to skip on — run the gate (conservative).
+
+# --- Trust gate: nothing from the repo is executed unless the USER trusted this path ---
+trust_file="$HOME/.config/claude-harness/trusted-projects"
+project_abs="$(pwd -P 2>/dev/null)"
+trusted=0
+if [ -n "$project_abs" ] && [ -f "$trust_file" ]; then
+  while IFS= read -r t || [ -n "$t" ]; do
+    t="${t%$'\r'}"
+    while [ "${t# }" != "$t" ] || [ "${t#$'\t'}" != "$t" ]; do
+      t="${t# }"
+      t="${t#$'\t'}"
+    done
+    case "$t" in
+      ''|'#'*) continue ;;
+    esac
+    if [ "$t" = "$project_abs" ]; then
+      trusted=1
+      break
+    fi
+  done < "$trust_file"
+fi
+
+if [ "$trusted" -ne 1 ]; then
+  # Untrusted: never eval TEST_COMMAND. Say so once a day, then stay quiet — a silent
+  # inert gate is how people end up believing they're protected when they aren't.
+  key_untrusted=$(printf '%s' "$project_abs" | shasum | cut -d' ' -f1)
+  stamp="${TMPDIR:-/tmp}/claude-harness-untrusted-$key_untrusted-$(date +%Y%m%d)"
+  if [ ! -f "$stamp" ]; then
+    : > "$stamp" 2>/dev/null
+    echo "harness: $project_abs not in $trust_file; stop-gate inactive. Run /harness:harness-init or add the path." >&2
+    exit 1   # non-blocking notice: shown, does not block the turn
+  fi
+  exit 0
+fi
 
 # --- Loop guard state (per-session, keyed on transcript_path) ---
 state_dir="${TMPDIR:-/tmp}/claude-harness-stop-test-gate"
