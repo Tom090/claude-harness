@@ -132,29 +132,66 @@ if printf '%s' "$cmd" | grep -Eq '\bgit\b.*\breset\b.*--hard\b'; then
 fi
 
 # --- rm -rf (any flag order/spelling) ---
-has_recursive=0
-has_force=0
-printf '%s' "$cmd" | grep -Eq -- '(-[a-zA-Z]*[rR][a-zA-Z]*\b|--recursive\b)' && has_recursive=1
-printf '%s' "$cmd" | grep -Eq -- '(-[a-zA-Z]*f[a-zA-Z]*\b|--force\b)' && has_force=1
+# Each shell SEGMENT is analyzed independently, and only a segment whose own command word
+# is `rm` is ever examined. Doing this per-segment rather than over the whole string is
+# what keeps three classes of false positive out (all seen in the wild; all fail-closed,
+# so they cost a spurious denial rather than a missed one):
+#   * `rm -f /tmp/some-random-name` — a stray "-r" inside an UNRELATED filename used to
+#     satisfy the recursive-flag test, because flags were matched across the whole string.
+#   * `rm -rf build/x; echo done` — tokens belonging to a LATER command used to be read as
+#     extra rm targets, forcing default-deny on an otherwise-allowed path.
+#   * `grep -n "rm -rf" file` — merely MENTIONING rm in a quoted argument used to trip the
+#     guard, since `\brm\b` matched but no bare `rm` token was found.
+# Command substitutions are split out as their own segments too, so `echo $(rm -rf /)` is
+# still caught. This remains a heuristic string-level guard, not a shell parser: it cannot
+# see through `eval`, an alias, or a path assembled at runtime, and it still errs toward
+# blocking whenever a target can't be resolved to a literal safe path.
+set -f          # no pathname expansion while tokenizing untrusted input
 
-if printf '%s' "$cmd" | grep -Eq '\brm\b' && [ "$has_recursive" -eq 1 ] && [ "$has_force" -eq 1 ]; then
-  # Pure-bash tokenizing (portable — BSD sed/grep on macOS don't reliably support \b in
-  # substitutions): find the token exactly equal to `rm`, then treat everything after it
-  # as candidate paths. Anything past a shell separator (&&, ;, |) only ever makes the
-  # check MORE conservative (falls to unsafe=1 below), matching the default-deny intent.
-  unsafe=0
-  found_path=0
-  seen_rm=0
-  for tok in $cmd; do
+segments="$cmd"
+segments="${segments//&&/$'\n'}"     # before the bare & rule
+segments="${segments//||/$'\n'}"     # before the bare | rule
+segments="${segments//\$(/$'\n'}"    # before the bare ( rule
+segments="${segments//;/$'\n'}"
+segments="${segments//|/$'\n'}"
+segments="${segments//&/$'\n'}"
+segments="${segments//\`/$'\n'}"
+segments="${segments//(/$'\n'}"
+segments="${segments//)/$'\n'}"
+
+rm_deny_msg="Blocked by harness policy: rm -rf outside the allowed build-cache/scratchpad scope (or targeting a PROTECTED_PATHS entry) is disallowed. Allowed: build/, node_modules/, dist/, target/, .gradle/, .kotlin/, .venv/, __pycache__/, /tmp or /private/tmp paths, and any *scratchpad* path. Confirm with the owner if you need to remove something else."
+
+while IFS= read -r segment; do
+  [ -n "$segment" ] || continue
+
+  seen_rm=0; has_recursive=0; has_force=0; unsafe=0; found_path=0; endopts=0
+
+  for tok in $segment; do
+    # --- locate the command word; anything that isn't `rm` disqualifies the segment ---
     if [ "$seen_rm" -eq 0 ]; then
       case "$tok" in
-        rm|*/rm) seen_rm=1 ;;
+        rm|*/rm|\\rm) seen_rm=1 ;;
+        *=*|sudo|command|time|env|nohup) ;;   # harmless prefixes: keep looking
+        *) break ;;                            # a different command entirely
       esac
       continue
     fi
-    case "$tok" in
-      -*) continue ;;   # flag, ignore
-    esac
+
+    # --- flags belonging to THIS rm invocation ---
+    if [ "$endopts" -eq 0 ]; then
+      case "$tok" in
+        --) endopts=1; continue ;;
+        --recursive) has_recursive=1; continue ;;
+        --force) has_force=1; continue ;;
+        --*) continue ;;
+        -*)
+          case "$tok" in *[rR]*) has_recursive=1 ;; esac
+          case "$tok" in *f*) has_force=1 ;; esac
+          continue ;;
+      esac
+    fi
+
+    # --- everything else is a target path ---
     found_path=1
     protected=0
     if [ -n "${PROTECTED_PATHS:-}" ]; then
@@ -181,9 +218,17 @@ if printf '%s' "$cmd" | grep -Eq '\brm\b' && [ "$has_recursive" -eq 1 ] && [ "$h
     esac
   done
 
-  if [ "$found_path" -eq 0 ] || [ "$unsafe" -eq 1 ]; then
-    deny "Blocked by harness policy: rm -rf outside the allowed build-cache/scratchpad scope (or targeting a PROTECTED_PATHS entry) is disallowed. Allowed: build/, node_modules/, dist/, target/, .gradle/, .kotlin/, .venv/, __pycache__/, /tmp or /private/tmp paths, and any *scratchpad* path. Confirm with the owner if you need to remove something else."
+  # Only -r AND -f together are guarded (`rm -r dir` alone defers to the permission flow,
+  # as it always has). A bare/ambiguous target, or no target at all, is denied.
+  if [ "$seen_rm" -eq 1 ] && [ "$has_recursive" -eq 1 ] && [ "$has_force" -eq 1 ]; then
+    if [ "$found_path" -eq 0 ] || [ "$unsafe" -eq 1 ]; then
+      deny "$rm_deny_msg"
+    fi
   fi
-fi
+done <<EOF
+$segments
+EOF
+
+set +f
 
 exit 0
