@@ -161,18 +161,31 @@ segments="${segments//)/$'\n'}"
 
 rm_deny_msg="Blocked by harness policy: rm -rf outside the allowed build-cache/scratchpad scope (or targeting a PROTECTED_PATHS entry) is disallowed. Allowed: build/, node_modules/, dist/, target/, .gradle/, .kotlin/, .venv/, __pycache__/, /tmp or /private/tmp paths, and any *scratchpad* path. Confirm with the owner if you need to remove something else."
 
-while IFS= read -r segment; do
+# Fed by a pipe, NOT a heredoc: a command containing a line that is exactly the heredoc
+# delimiter (any `cat <<EOF ... EOF` script) would end the heredoc early and leave
+# everything after it unscanned. The pipe makes this loop a subshell, so deny()'s exit
+# ends the subshell — the deny JSON is still written to the script's stdout exactly once,
+# and the outer script then falls through to its own `exit 0` emitting nothing further.
+printf '%s\n' "$segments" | while IFS= read -r segment; do
   [ -n "$segment" ] || continue
 
   seen_rm=0; has_recursive=0; has_force=0; unsafe=0; found_path=0; endopts=0
 
   for tok in $segment; do
-    # --- locate the command word; anything that isn't `rm` disqualifies the segment ---
+    # --- locate the rm invocation: the first BARE `rm` token in this segment ---
+    # Scan the whole segment instead of giving up at the first unrecognized word. rm is
+    # routinely reached through another command word in the same segment —
+    # `echo / | xargs rm -rf`, `find . -exec rm -rf {} \;`, `sudo rm -rf x`,
+    # `VAR=1 rm -rf x` — and bailing out early left every one of those unscanned.
+    # Only an UNQUOTED token that is exactly `rm` (or a path ending in /rm, or \rm)
+    # starts an invocation, so merely mentioning rm in an argument still doesn't trip
+    # the guard: in `grep -n "rm -rf" file` the token is `"rm`, not `rm`. `echo rm -rf /`
+    # does trip it — prose shaped exactly like an invocation is denied, which costs a
+    # permission prompt, never a false allow.
     if [ "$seen_rm" -eq 0 ]; then
       case "$tok" in
         rm|*/rm|\\rm) seen_rm=1 ;;
-        *=*|sudo|command|time|env|nohup) ;;   # harmless prefixes: keep looking
-        *) break ;;                            # a different command entirely
+        *) ;;                                  # not the invocation — keep scanning
       esac
       continue
     fi
@@ -225,9 +238,7 @@ while IFS= read -r segment; do
       deny "$rm_deny_msg"
     fi
   fi
-done <<EOF
-$segments
-EOF
+done
 
 set +f
 
