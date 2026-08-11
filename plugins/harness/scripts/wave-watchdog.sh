@@ -20,9 +20,22 @@ MAX_LOOPS="${MAX_LOOPS:-80}" # ~4h at default interval
 [ $# -ge 1 ] || { echo "usage: wave-watchdog.sh <transcript-or-task-output-path>..." >&2; exit 2; }
 
 # Task output files are symlinks to the subagent transcript JSONL — resolve them.
+# python3 is not guaranteed everywhere, so fall back to readlink -f and then to the path
+# as given (a plain, non-symlink file needs no resolution at all).
+resolve() {
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" && return 0
+    fi
+    readlink -f "$1" 2>/dev/null && return 0
+    printf '%s\n' "$1"
+}
+
 paths=()
 for a in "$@"; do
-    paths+=("$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$a")")
+    r="$(resolve "$a")"
+    [ -n "$r" ] || r="$a"
+    [ -e "$r" ] || echo "warning: $r does not exist (yet) — watching anyway" >&2
+    paths+=("$r")
 done
 
 for _ in $(seq 1 "$MAX_LOOPS"); do

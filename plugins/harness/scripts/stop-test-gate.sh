@@ -13,11 +13,13 @@
 # .claude/harness.env keys read:
 #   TEST_COMMAND             required. e.g. "./gradlew testDebugUnitTest lintDebug" or
 #                             "npm test && npm run lint" or "cargo test && cargo clippy"
-#   BUILD_RELEVANT_PATTERNS  optional. Space-separated glob prefixes (matched against
-#                             changed file paths) that mean "this session touched code
-#                             worth gating on", e.g. "app/ build.gradle.kts gradlew".
-#                             If unset, the gate always runs when there are any changed
-#                             files at all (conservative default — no false skips).
+#   BUILD_RELEVANT_PATTERNS  optional. Space-separated path fragments, matched as fixed
+#                             strings (substring, not glob) against the session's changed
+#                             file paths — "this session touched code worth gating on",
+#                             e.g. "app/ build.gradle.kts gradlew". If unset, the gate
+#                             runs whenever the session changed ANY file at all
+#                             (conservative default — no false skips); a clean tree
+#                             skips, and a directory with no git signal always runs.
 #
 # Loop guard: caps consecutive blocks per session at 3 (state keyed on transcript_path,
 # since Claude Code has no built-in Stop-hook loop-prevention field). After 3 blocked
@@ -41,8 +43,11 @@ source .claude/harness.env
 transcript_path=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
 [ -z "$transcript_path" ] && transcript_path="default"
 
-# --- Scope: only run when the session touched relevant files (if configured). ---
-if [ -n "${BUILD_RELEVANT_PATTERNS:-}" ]; then
+# --- Scope: only run when the session actually touched relevant files. ---
+# Union of: uncommitted working-tree diff, staged diff, everything committed on this
+# branch since it diverged from the default branch, AND untracked new files (git diff
+# alone misses brand-new files that were never staged).
+if git rev-parse --git-dir >/dev/null 2>&1; then
   base_ref=$(git merge-base "${DEFAULT_BRANCH:-main}" HEAD 2>/dev/null || echo HEAD)
   changed_files="$(
     {
@@ -50,18 +55,24 @@ if [ -n "${BUILD_RELEVANT_PATTERNS:-}" ]; then
       git diff --name-only --cached 2>/dev/null
       git diff --name-only "$base_ref" HEAD 2>/dev/null
       git ls-files --others --exclude-standard 2>/dev/null   # untracked new files
-    } | sort -u
+    } | sort -u | grep -v '^[[:space:]]*$'
   )"
 
-  matched=0
-  for pat in $BUILD_RELEVANT_PATTERNS; do
-    if printf '%s\n' "$changed_files" | grep -Fq "$pat"; then
-      matched=1
-      break
-    fi
-  done
-  [ "$matched" -eq 1 ] || exit 0  # nothing relevant changed: skip, don't tax the session
+  if [ -n "${BUILD_RELEVANT_PATTERNS:-}" ]; then
+    matched=0
+    for pat in $BUILD_RELEVANT_PATTERNS; do
+      if printf '%s\n' "$changed_files" | grep -Fq "$pat"; then
+        matched=1
+        break
+      fi
+    done
+    [ "$matched" -eq 1 ] || exit 0  # nothing relevant changed: skip, don't tax the session
+  else
+    # No patterns configured: gate on "did this session change anything at all".
+    [ -n "$changed_files" ] || exit 0
+  fi
 fi
+# Not a git repo: no changed-file signal to skip on — run the gate (conservative).
 
 # --- Loop guard state (per-session, keyed on transcript_path) ---
 state_dir="${TMPDIR:-/tmp}/claude-harness-stop-test-gate"

@@ -13,6 +13,11 @@
 #                     beyond the generic .gitignore-style denials:
 #                     PROTECTED_PATHS="secrets .env keystore.jks"
 #
+# harness.env is READ, never `source`d, by this hook: it runs on every Bash call in every
+# enabled project, and sourcing a repo-controlled file that often would execute whatever
+# a cloned repo put in it. Only literal `KEY="value"` lines are understood here (that is
+# the documented format — see templates/harness.env.example).
+#
 # Denies:
 #   - `git push --force` / `-f` (allows the safer `--force-with-lease`)
 #   - `git reset --hard`
@@ -29,17 +34,63 @@
 # Output: JSON on stdout with hookSpecificOutput.permissionDecision=deny to block;
 #         exit 0 with no output to defer to the normal permission flow.
 
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-[ -f "$PROJECT_DIR/.claude/harness.env" ] || exit 0
-# shellcheck disable=SC1091
-source "$PROJECT_DIR/.claude/harness.env"
-
+# Always drain stdin first: exiting without reading it leaves the caller writing into a
+# closed pipe.
 input=$(cat)
-cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null)
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+env_file="$PROJECT_DIR/.claude/harness.env"
+[ -f "$env_file" ] || exit 0
+
+# --- Read PROTECTED_PATHS without executing the file (see header) ---
+# Deliberately NOT inside a $( ) command substitution: bash 3.2 (still /bin/bash on
+# macOS) mis-parses `case` patterns nested in command substitution.
+PROTECTED_PATHS=""
+while IFS= read -r line || [ -n "$line" ]; do
+  line="${line%$'\r'}"                        # tolerate CRLF
+  while [ "${line# }" != "$line" ] || [ "${line#$'\t'}" != "$line" ]; do
+    line="${line# }"
+    line="${line#$'\t'}"
+  done
+  case "$line" in
+    PROTECTED_PATHS=*) ;;
+    *) continue ;;
+  esac
+  val="${line#PROTECTED_PATHS=}"
+  val="${val%\"}"; val="${val#\"}"
+  val="${val%\'}"; val="${val#\'}"
+  PROTECTED_PATHS="$val"                      # last assignment wins, as with `source`
+done < "$env_file"
+
+# --- JSON in/out: jq preferred, python3 fallback. If neither exists this guard cannot
+# read the command at all — say so ONCE per day rather than silently going inert. ---
+if command -v jq >/dev/null 2>&1; then
+  cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null)
+elif command -v python3 >/dev/null 2>&1; then
+  cmd=$(printf '%s' "$input" | python3 -c 'import json,sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+print((d.get("tool_input") or {}).get("command") or "")' 2>/dev/null)
+else
+  warn_stamp="${TMPDIR:-/tmp}/claude-harness-nojson-$(date +%Y%m%d)"
+  if [ ! -f "$warn_stamp" ]; then
+    : > "$warn_stamp" 2>/dev/null
+    echo "harness: neither jq nor python3 found — the destructive-command guard is INACTIVE. Install jq." >&2
+    exit 1   # non-blocking error: surfaced to the user, does not block the tool call
+  fi
+  exit 0
+fi
 [ -z "$cmd" ] && exit 0
 
 deny() {
-  jq -n --arg reason "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}'
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg reason "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$reason}}'
+  else
+    printf '%s' "$1" | python3 -c 'import json,sys
+print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":sys.stdin.read()}}))'
+  fi
   exit 0
 }
 
