@@ -1,0 +1,16 @@
+# Decisions log
+
+Durable record of rulings and why they were made — newest entry first. This is the
+project's memory across agent sessions; see `CLAUDE.md` § Resuming. Written by
+`/harness:checkpoint`; read at the start of every fresh lead session.
+
+## {{DATE}} — Harness initialized
+
+- Ran `/harness:harness-init`. Stack detected/declared: {{STACK}}.
+- Builder roster generated: {{BUILDER_LIST}}.
+- Deterministic gates: stop-test-gate (`TEST_COMMAND={{TEST_COMMAND}}`),
+  destructive-bash blocker, test-weakening diff guard — configured via
+  `.claude/harness.env`, verified with synthetic triggers (see PR / session notes for
+  the verification transcript).
+- Owner-Telegram bridge: {{TELEGRAM_STATUS}}.
+- GitHub setup: {{GITHUB_SETUP_SUMMARY}}.

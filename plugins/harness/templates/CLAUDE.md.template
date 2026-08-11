@@ -1,0 +1,119 @@
+# {{PROJECT_NAME}} — project conventions
+
+Read this fully before doing any work. Keep it under ~200 lines — put detail in `docs/`
+and `.claude/rules/`.
+
+This file has two layers, kept deliberately separate:
+- **Descriptive** (below): what this repo *is* — owned by Claude Code's built-in
+  `/init`, safe to regenerate/refresh later as the codebase changes.
+- **Prescriptive** (further down): the operating model — owned by the harness plugin,
+  thin pointers into `.claude/rules/` and the plugin's own `rules/`, not inline prose.
+  `/init` should not rewrite this section.
+
+<!-- ============================== DESCRIPTIVE ============================== -->
+<!-- Owned by /init. Safe to let /init regenerate this half later. -->
+
+## What this is
+
+{{PROJECT_DESCRIPTION}}
+
+## Architecture
+
+{{ARCHITECTURE_SUMMARY}}
+
+<!-- e.g.:
+- Layout: `<frontend dir>/` → `<backend dir>/` → `<shared/lib dir>/`.
+- Framework/stack: {{STACK}}.
+- Data/sync: {{DATA_LAYER}}.
+-->
+
+## Build, test, verify
+
+- Test: `{{TEST_COMMAND}}`
+- Lint: `{{LINT_COMMAND}}`
+- Build: `{{BUILD_COMMAND}}`
+- Always run the `/harness:validate` skill before opening a PR.
+<!-- If this project also verifies UI/behavior changes by actually running the app,
+     describe that step here and reference a rules file for the checklist, e.g.
+     `.claude/rules/ux-verification.md` (see templates/examples/ux-verification-mobile.md
+     for a worked example from a mobile app). -->
+
+## Code style
+
+- {{CODE_STYLE_SUMMARY}}
+- Details in `.claude/rules/` (add stack-specific style rules there, not here).
+
+## Gotchas
+
+{{GOTCHAS}}
+
+<!-- ============================== PRESCRIPTIVE ============================= -->
+<!-- Owned by the harness. Thin pointers only — the substance lives in
+     .claude/rules/ and the harness plugin's own rules/. /init does not touch this. -->
+
+## Domain non-negotiables
+
+<!-- Optional: any invariant that must survive every future change regardless of who's
+     building — a safety layer, a secrets boundary, a compliance rule. Delete this
+     section if the project has none. Keep each bullet to what must never change and
+     why; put mechanism detail in docs/ or .claude/rules/. -->
+
+{{DOMAIN_NON_NEGOTIABLES}}
+
+## GitHub workflow
+
+- All work is tracked in GitHub issues; issues are the queue.
+- Start a session by reading assigned issues: `gh issue list --label "agent:<you>"`.
+- Branch per issue: `git checkout -b feat/<issue#>-<slug>`; PR with `closes #<issue>`.
+- Never commit to `{{DEFAULT_BRANCH}}` directly. The reviewer agent signs off before merge.
+- See the harness plugin's `rules/operating-model.md` for granularity, review-and-fix,
+  and session-lifecycle policy.
+
+## Agent roles
+
+- **wave-lead** (harness plugin) — orchestrates one delegated wave end-to-end so the
+  owner-facing lead session stays thin.
+{{BUILDER_ROSTER}}
+- **reviewer** (harness plugin) — review-and-fix: applies mechanical fixes for its own
+  findings directly on the PR branch, test-first; routes back to a builder only
+  design-level rework. Enforces this file, tests, and lint before merge.
+- **researcher** (harness plugin) — investigates unfamiliar APIs/libraries; writes
+  findings to `docs/research/`.
+
+## Models
+
+- **Lead / driver session**: a high-level orchestrator only — owner interaction, queue
+  triage, checkpoints. Delegates wave orchestration to fresh **wave-lead** subagents
+  rather than running waves itself.
+- **Builders**: {{BUILDER_MODEL}}, high reasoning effort.
+- **Reviewer**: {{REVIEWER_MODEL}} — bug-finding is its edge, and it's the safety net
+  for builder output.
+- **Researcher**: {{RESEARCHER_MODEL}}.
+- Token efficiency is a project goal in its own right — see the harness plugin's
+  `rules/token-efficiency.md`; every agent brief should cite it.
+- **Set every subagent's model explicitly at launch** — the parent session's model does
+  not propagate to an overridden subagent.
+
+## Agent sessions
+
+See `.claude/agent-sessions.md` and the harness plugin's `rules/operating-model.md` §
+Agent-session lifecycle for the resume/retire/distill policy.
+
+## Resuming in a new session (lead)
+
+Work spans many sessions; reconstruct state from durable sources, not chat history. On start:
+1. Read this file and `docs/decisions.md` (the why behind the setup).
+2. `gh issue list --state open` (the queue) · `gh pr list` (in review) · `git log --oneline -12`.
+3. Identify the current phase (`docs/roadmap.md`, if this project uses one) and the next
+   unblocked issue.
+Or run `/harness:project-status` for an automated snapshot. Durable state = GitHub
+issues/PRs + `docs/decisions.md` + this file — keep them current as decisions change.
+The write-side is `/harness:checkpoint`: run it at wave boundaries (post-merge, before a
+new workstream, or when the session is getting heavy) — don't wait to be asked.
+{{OWNER_COMMS_LINE}}
+
+## Refreshing this file
+
+Safe to run `/init` later to refresh the descriptive half above as the codebase evolves;
+the harness's operating model lives in `.claude/rules/` and the harness plugin's own
+`rules/`, which `/init` does not touch.

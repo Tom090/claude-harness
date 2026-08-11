@@ -1,0 +1,10 @@
+{
+  "name": "harness",
+  "description": "Portable agentic-harness for multi-agent Claude Code projects: wave-lead/reviewer/researcher roles, deterministic quality gates, owner-Telegram bridge, and a bootstrap skill that binds it all into a new repo.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Tom Walne"
+  },
+  "license": "MIT",
+  "hooks": "./hooks/hooks.json"
+}

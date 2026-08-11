@@ -1,0 +1,95 @@
+#!/bin/bash
+# Stop hook: deterministic quality gate.
+#
+# Runs the project's test/lint command and blocks the agent from finishing its turn
+# (exit 2) if it fails. Scoped so docs-only / non-code sessions never pay the cost: it
+# skips entirely unless the session touched files matching BUILD_RELEVANT_PATTERNS.
+#
+# CRITICAL: this hook fires in EVERY project where the harness plugin is enabled, so it
+# is a no-op (exit 0, silent) unless the project has run /harness:harness-init and
+# written .claude/harness.env with at least TEST_COMMAND set. This is what keeps the
+# plugin safe to enable in a project before it's been bound.
+#
+# .claude/harness.env keys read:
+#   TEST_COMMAND             required. e.g. "./gradlew testDebugUnitTest lintDebug" or
+#                             "npm test && npm run lint" or "cargo test && cargo clippy"
+#   BUILD_RELEVANT_PATTERNS  optional. Space-separated glob prefixes (matched against
+#                             changed file paths) that mean "this session touched code
+#                             worth gating on", e.g. "app/ build.gradle.kts gradlew".
+#                             If unset, the gate always runs when there are any changed
+#                             files at all (conservative default — no false skips).
+#
+# Loop guard: caps consecutive blocks per session at 3 (state keyed on transcript_path,
+# since Claude Code has no built-in Stop-hook loop-prevention field). After 3 blocked
+# attempts it lets the turn end anyway with a loud non-blocking warning, rather than
+# hanging the session forever on an unfixable failure.
+#
+# Input: hook JSON on stdin (transcript_path, cwd, hook_event_name, ...).
+# Output: exit 0 = allow stop. exit 2 + stderr = block, stderr fed back to the agent.
+#         exit 1 = non-blocking warning (shown, doesn't block) — used only for the
+#         loop-guard escape hatch.
+
+input=$(cat)
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+cd "$PROJECT_DIR" || exit 0
+
+[ -f .claude/harness.env ] || exit 0
+# shellcheck disable=SC1091
+source .claude/harness.env
+[ -n "${TEST_COMMAND:-}" ] || exit 0
+
+transcript_path=$(printf '%s' "$input" | jq -r '.transcript_path // empty' 2>/dev/null)
+[ -z "$transcript_path" ] && transcript_path="default"
+
+# --- Scope: only run when the session touched relevant files (if configured). ---
+if [ -n "${BUILD_RELEVANT_PATTERNS:-}" ]; then
+  base_ref=$(git merge-base "${DEFAULT_BRANCH:-main}" HEAD 2>/dev/null || echo HEAD)
+  changed_files="$(
+    {
+      git diff --name-only 2>/dev/null
+      git diff --name-only --cached 2>/dev/null
+      git diff --name-only "$base_ref" HEAD 2>/dev/null
+      git ls-files --others --exclude-standard 2>/dev/null   # untracked new files
+    } | sort -u
+  )"
+
+  matched=0
+  for pat in $BUILD_RELEVANT_PATTERNS; do
+    if printf '%s\n' "$changed_files" | grep -Fq "$pat"; then
+      matched=1
+      break
+    fi
+  done
+  [ "$matched" -eq 1 ] || exit 0  # nothing relevant changed: skip, don't tax the session
+fi
+
+# --- Loop guard state (per-session, keyed on transcript_path) ---
+state_dir="${TMPDIR:-/tmp}/claude-harness-stop-test-gate"
+mkdir -p "$state_dir" 2>/dev/null
+key=$(printf '%s' "$transcript_path" | shasum | cut -d' ' -f1)
+state_file="$state_dir/$key"
+attempts=0
+[ -f "$state_file" ] && attempts=$(cat "$state_file" 2>/dev/null || echo 0)
+
+test_output=$(eval "$TEST_COMMAND" 2>&1)
+test_status=$?
+
+if [ "$test_status" -eq 0 ]; then
+  rm -f "$state_file" 2>/dev/null
+  exit 0
+fi
+
+attempts=$((attempts + 1))
+echo "$attempts" > "$state_file"
+
+if [ "$attempts" -gt 3 ]; then
+  echo "WARNING (stop-test-gate): '$TEST_COMMAND' still failing after 3 blocked stops. Letting the session end anyway (loop guard) — do NOT open a PR until this is green." >&2
+  rm -f "$state_file" 2>/dev/null
+  exit 1
+fi
+
+{
+  echo "BLOCKED: '$TEST_COMMAND' failed (attempt $attempts/3). Fix the failure before finishing this turn."
+  echo "$test_output" | tail -60
+} >&2
+exit 2

@@ -1,0 +1,13 @@
+{
+  "name": "claude-harness",
+  "description": "Portable agentic-harness plugins for multi-agent Claude Code projects.",
+  "owner": {
+    "name": "Tom Walne"
+  },
+  "plugins": [
+    {
+      "name": "harness",
+      "source": "./plugins/harness"
+    }
+  ]
+}
