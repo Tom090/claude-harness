@@ -46,7 +46,10 @@ claude-harness/
 │   │                    # ask-owner, validate, review-pr
 │   ├── agents/         # wave-lead, reviewer, researcher (builder agents are NOT
 │   │                    # shipped here — they're generated per project, see below)
-│   ├── hooks/hooks.json
+│   ├── hooks/hooks.json  # auto-discovered at this standard path — do NOT also
+│   │                     # declare it in plugin.json (`hooks` there is only for
+│   │                     # ADDITIONAL hook files; declaring the standard one makes
+│   │                     # the plugin fail to load with "Duplicate hooks file")
 │   ├── scripts/        # stop-test-gate, block-destructive-bash, check-test-weakening,
 │   │                    # telegram-owner, wave-watchdog
 │   ├── rules/           # token-efficiency.md, operating-model.md — reference docs the
