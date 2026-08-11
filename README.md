@@ -64,8 +64,10 @@ claude-harness/
 
 The Stop-hook test gate and the destructive-command blocker fire in **every** project
 that has this plugin enabled — including ones that haven't been bound yet. Both hooks
-read `.claude/harness.env` and silently no-op if it's absent or incomplete, so installing
-the plugin is safe before you've decided on a `TEST_COMMAND` for a given repo.
+read `.claude/harness.env` and silently no-op (exit 0, no output) if it's absent, so
+installing the plugin is safe before you've decided anything about a given repo. Once the
+file exists the blocker is live; the Stop gate additionally needs `TEST_COMMAND`, and
+`BUILD_RELEVANT_PATTERNS` is what keeps it off docs-only sessions.
 
 ## Upstreaming improvements
 
