@@ -24,4 +24,4 @@ If the lint command supports auto-fix (`spotlessApply`, `eslint --fix`, `cargo f
 `ruff check --fix`), apply it and re-run before reporting.
 
 Report PASS/FAIL with the key errors, quietly (pipe verbose output through `tail -40` —
-see `rules/token-efficiency.md`). Do not open a PR until this passes.
+see `${CLAUDE_PLUGIN_ROOT}/rules/token-efficiency.md`). Do not open a PR until this passes.

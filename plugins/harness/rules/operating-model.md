@@ -73,9 +73,9 @@ a reviewer with **Edit/Write** access, not read-only.
 
 Streams can die mid-turn, leaving a session marked "running" while burning zero tokens —
 no lifecycle hook fires for that. Whenever a wave (or any long delegate) is launched as a
-background task, launch `scripts/wave-watchdog.sh <output files>` alongside it. It exits
-noisily on prolonged transcript idleness so whoever is driving gets re-invoked instead of
-a wave silently going nowhere for hours.
+background task, launch `${CLAUDE_PLUGIN_ROOT}/scripts/wave-watchdog.sh <output files>`
+alongside it. It exits noisily on prolonged transcript idleness so whoever is driving
+gets re-invoked instead of a wave silently going nowhere for hours.
 
 ## Owner-comms policy
 

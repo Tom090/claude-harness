@@ -16,8 +16,8 @@ Do the following, writing only what is NOT already durable — skip any step wit
    the why. Rulings that exist only in chat are the #1 loss on reset.
 2. **Open threads → GitHub issues.** Anything discussed-but-not-queued becomes an issue
    (or a comment on the existing one). Batch small related residuals per
-   `rules/operating-model.md`. Unfinished in-flight work: comment current state on its
-   issue/PR so the next session starts from facts, not archaeology.
+   `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md`. Unfinished in-flight work: comment
+   current state on its issue/PR so the next session starts from facts, not archaeology.
 3. **Merged-PR hygiene.** If PRs merged this session and their sessions are retired,
    distill lessons into `.claude/agent-sessions.md` (a few lines each, per its own
    header rules).

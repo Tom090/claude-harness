@@ -91,6 +91,11 @@ This file has two layers, kept deliberately separate:
 - **Researcher**: {{RESEARCHER_MODEL}}.
 - Token efficiency is a project goal in its own right — see the harness plugin's
   `rules/token-efficiency.md`; every agent brief should cite it.
+<!-- The harness plugin's own rules (operating-model.md, token-efficiency.md) live inside
+     the installed plugin, not this repo. Harness skills/agents get the absolute path
+     substituted for them; from a plain session, locate them with
+     `ls -d ~/.claude/plugins/cache/*/harness/*/rules` (or the marketplace source
+     directory, if the plugin was installed from a local path). -->
 - **Set every subagent's model explicitly at launch** — the parent session's model does
   not propagate to an overridden subagent.
 

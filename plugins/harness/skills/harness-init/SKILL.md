@@ -13,11 +13,22 @@ descriptive half of `CLAUDE.md` (what the repo *is*); this skill owns the prescr
 half (the operating model) and only ever generates the descriptive half when nothing
 better already exists.
 
+## 0. Preflight
+
+Check these and report; don't silently continue past a miss:
+- `command -v jq` — the destructive-command hook parses its input with `jq` (falling back
+  to `python3`). With neither installed that gate cannot inspect commands at all; tell the
+  user to install `jq` before relying on it.
+- `command -v gh` and `gh auth status` — step 3 needs them; skip the GitHub steps and say
+  so if they're missing.
+- `git rev-parse --git-dir` — note whether this is a repo yet (step 3 creates one).
+
 ## 1. Interview + detect
 
 - **If `CLAUDE.md` already exists**: read it. Never overwrite it. Merge — add the
-  prescriptive section (roster, gates, workflow) from `templates/CLAUDE.md.template` if
-  it's missing, keep the existing descriptive content as-is.
+  prescriptive section (roster, gates, workflow) from
+  `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.template` if it's missing, keeping the
+  existing descriptive content as-is.
 - **If the repo has code but no `CLAUDE.md`**: run the built-in `/init` first (or, if
   unavailable, do equivalent codebase discovery yourself) and use its output as the
   descriptive input — build/test/lint commands, architecture, conventions. Don't
@@ -29,7 +40,7 @@ better already exists.
 - Ask via **AskUserQuestion**, and only for what neither the repo nor the user's
   kickoff message already answered:
   1. Builder roles needed (one generic builder, or a split like frontend/backend?) —
-     see `templates/agent-roster/SPECIALIZING.md`.
+     see `${CLAUDE_PLUGIN_ROOT}/templates/agent-roster/SPECIALIZING.md`.
   2. Quality/deadline posture (affects nothing about model tier — that's fixed policy —
      but may affect how strict the Stop-hook gate should be out of the gate).
   3. Whether the owner wants the Telegram ask-owner loop set up now or later.
@@ -38,25 +49,30 @@ better already exists.
 
 All of these go INTO the target project, not this plugin:
 
-- **`CLAUDE.md`**: from `templates/CLAUDE.md.template`. Fill every `{{PLACEHOLDER}}`.
-  `{{BUILDER_ROSTER}}` is a bullet per generated builder agent (name + one-line role).
-  `{{OWNER_COMMS_LINE}}` is the Telegram-policy line from the harness plugin's
-  `rules/operating-model.md` § Owner-comms policy if the bridge is being set up, else
-  omit it. Keep it under ~200 lines — link to `docs/` and `.claude/rules/`, don't inline.
+- **`CLAUDE.md`**: from `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.template`. Fill every
+  `{{PLACEHOLDER}}`. `{{BUILDER_ROSTER}}` is a bullet per generated builder agent (name +
+  one-line role). `{{OWNER_COMMS_LINE}}` is the Telegram-policy line from
+  `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Owner-comms policy if the bridge is
+  being set up, else omit it. Keep it under ~200 lines — link to `docs/` and
+  `.claude/rules/`, don't inline.
 - **`.claude/agents/*.md`**: one file per builder role from step 1, generated from
-  `templates/agent-roster/generic-builder.md` (models set explicitly — builders
-  `sonnet`). Do NOT add `reviewer`/`researcher`/`wave-lead` agent files here — those
-  ship with the harness plugin itself (`plugins/harness/agents/`) and are already
-  available to spawn once the plugin is installed; generating project-local copies
-  would just fork them out of sync with plugin updates.
-- **`.claude/harness.env`**: from `templates/harness.env.example` — set real
-  `TEST_COMMAND`/`LINT_COMMAND`/`PROJECT_NAME`/`DEFAULT_BRANCH` for the detected stack;
-  leave the rest at sane defaults unless the interview surfaced a need (e.g.
-  `PROTECTED_PATHS` for a secrets directory).
-- **`docs/decisions.md`**: seed from `templates/decisions.md.template` if it doesn't
-  exist; if it does, append the seed entry.
-- **`.claude/agent-sessions.md`**: seed from `templates/agent-sessions.md.template` if
-  it doesn't exist.
+  `${CLAUDE_PLUGIN_ROOT}/templates/agent-roster/generic-builder.md` (models set
+  explicitly — builders `sonnet`). Do NOT add `reviewer`/`researcher`/`wave-lead` agent
+  files here — those ship with the harness plugin itself and are already spawnable as
+  `harness:reviewer` / `harness:researcher` / `harness:wave-lead` once the plugin is
+  installed; project-local copies would just fork them out of sync with plugin updates.
+- **`.claude/harness.env`**: from `${CLAUDE_PLUGIN_ROOT}/templates/harness.env.example` —
+  set real `TEST_COMMAND`/`LINT_COMMAND`/`PROJECT_NAME`/`DEFAULT_BRANCH` for the detected
+  stack, and **always set `BUILD_RELEVANT_PATTERNS`** to this stack's source/build paths
+  (e.g. `"src/ package.json"`, `"app/ build.gradle.kts gradlew"`, `"src/ Cargo.toml"`).
+  Left empty, the Stop gate runs the full `TEST_COMMAND` at the end of every turn that
+  changed *any* file — including docs-only and harness-only sessions. Set
+  `PROTECTED_PATHS` too if the interview surfaced a secrets/credentials directory.
+- **`docs/decisions.md`**: seed from
+  `${CLAUDE_PLUGIN_ROOT}/templates/decisions.md.template` if it doesn't exist; if it
+  does, append the seed entry.
+- **`.claude/agent-sessions.md`**: seed from
+  `${CLAUDE_PLUGIN_ROOT}/templates/agent-sessions.md.template` if it doesn't exist.
 - **`docs/roadmap.md`**: a short phase skeleton if the project wants one (optional —
   skip if the interview says no phased roadmap is wanted).
 
@@ -75,11 +91,17 @@ All of these go INTO the target project, not this plugin:
 
 ## 4. Verify the gates — do not skip
 
-Run `/harness:verify-gates` now. **Known gotcha**: hook/settings changes are NOT
-hot-reloaded mid-session — verification must run in a fresh session. Tell the user:
-"Restart Claude Code in this project, then run `/harness:verify-gates`." Do not declare
-harness-init done until that pass has actually run (in this session if the hooks were
-already active before you started, otherwise after the restart you just requested).
+Run `/harness:verify-gates` now.
+
+**Known gotcha**: plugin/hook *registration* is not hot-reloaded — if the harness plugin
+was installed or enabled during this same session, its hooks are not live yet and
+verification must run after a restart. `.claude/harness.env` itself IS re-read by the
+hook scripts on every invocation, so a harness.env you just wrote needs no restart.
+
+So: if the plugin was already enabled when this session started, run
+`/harness:verify-gates` now. Otherwise tell the user: "Restart Claude Code in this
+project, then run `/harness:verify-gates`." Either way, do not declare harness-init done
+until that pass has actually run and reported PASS for all three gates.
 
 ## 5. Checkpoint
 
@@ -90,6 +112,6 @@ Commit it.
 ## Closing notes (tell the user)
 
 - Safe to run `/init` later to refresh the descriptive half of `CLAUDE.md`; the harness
-  operating model lives in `.claude/rules/` and the harness plugin's own `rules/`, which
-  `/init` does not touch.
+  operating model lives in `.claude/rules/` and the plugin's own
+  `${CLAUDE_PLUGIN_ROOT}/rules/`, which `/init` does not touch.
 - Restart-then-`/harness:verify-gates` if you haven't already done so this session.

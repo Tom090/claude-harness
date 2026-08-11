@@ -16,9 +16,10 @@ reachable on instead — don't stall.
 - One-way `send` for things worth a phone buzz: a wave finished while they're away, a
   release is ready, something broke that they'd want to know about now. Not for routine
   progress — notification fatigue kills the channel.
-- See `rules/operating-model.md` § Owner-comms policy: if the owner asked to be updated
-  via this channel, every question meant for them goes through it, including routine
-  "what next?" questions at a wave boundary — not just mid-wave blockers.
+- See `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Owner-comms policy: if the
+  owner asked to be updated via this channel, every question meant for them goes through
+  it, including routine "what next?" questions at a wave boundary — not just mid-wave
+  blockers.
 
 ## Setup (one-time, per machine)
 
@@ -38,13 +39,14 @@ reachable on instead — don't stall.
 
 One-way notify (returns immediately):
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/telegram-owner.sh send "0.7.0 shipped — calendar + UX fixes"
+${CLAUDE_PLUGIN_ROOT}/scripts/telegram-owner.sh send "0.7.0 shipped — 4 issues closed, all gates green"
 ```
 
 Blocking question — run as a **background task** (it long-polls until the reply or a
 240-min default timeout; you get re-invoked when it exits):
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/telegram-owner.sh ask "Q: feed timer — keep seconds visible, or minutes only? Context: PR #190 review split. Default if no reply: minutes only. Reply 1=seconds 2=minutes"
+${CLAUDE_PLUGIN_ROOT}/scripts/telegram-owner.sh ask \
+  "Q: ship #42 behind a flag, or hold for the 0.8 cut? Context: reviewer split on risk. Default if no reply: hold. Reply 1=flag 2=hold"
 ```
 
 - Phrase for a one-word phone reply: context in one line, numbered options, and ALWAYS
