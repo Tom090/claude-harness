@@ -26,7 +26,7 @@
 # common stacks):
 #   TEST_RELEVANT_PATTERNS  extra colon-separated shell glob patterns (bash `case`
 #                           syntax) treated as test-relevant, e.g.
-#                           "firestore-tests/fixtures/*.json:*[Cc]orpus*"
+#                           "e2e/data/*.json:golden/*"
 #   RULING_KEYWORDS         extra pipe-separated grep -Ei alternatives that count as a
 #                           ruling reference, on top of the generic defaults
 #   DEFAULT_BRANCH          branch to diff against when --base is not given (default main)
