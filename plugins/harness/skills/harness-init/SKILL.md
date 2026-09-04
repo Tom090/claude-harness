@@ -61,9 +61,10 @@ All of these go INTO the target project, not this plugin:
   `creative-director` agent files here — those ship with the harness plugin itself and
   are already spawnable as `harness:reviewer` / `harness:researcher` /
   `harness:wave-lead` / `harness:creative-director` once the plugin is installed;
-  project-local copies would just fork them out of sync with plugin updates. Only bring
-  in `creative-director` (and the project-local design-authoring roles it depends on)
-  if the project is adopting the design-led wave shape from
+  project-local copies would just fork them out of sync with plugin updates. Unlike the
+  other three, `creative-director` is opt-in: only wire it into the project's `CLAUDE.md`
+  roster (and generate the project-local design-authoring roles it judges) if the project
+  is adopting the design-led wave shape from
   `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Design-led wave shape — it's
   optional, not part of the default roster.
 - **`.claude/harness.env`**: from `${CLAUDE_PLUGIN_ROOT}/templates/harness.env.example` —

@@ -45,8 +45,8 @@ context.
 9. **Screenshot budget.** A screenshot is the most expensive token unit an agent
    spends — far more than an equivalent amount of text, and it doesn't compress the
    way prose does. Judgment-tier verdicts (Fable-tier or equivalent — see
-   `rules/operating-model.md` § Design-led wave shape) are capped at **≤12
-   screenshots** per play verdict, one map/level. Execution-tier play sessions (an
-   Opus-tier play-tester or equivalent) are bounded by whatever screenshot/session
+   `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Design-led wave shape) are capped
+   at **≤12 screenshots** per play verdict, one map/level. Execution-tier play sessions
+   (an Opus-tier play-tester or equivalent) are bounded by whatever screenshot/session
    budget the wave brief sets — never open-ended, even though their cap is typically
    looser than a judgment-tier verdict's.

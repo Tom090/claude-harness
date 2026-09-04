@@ -68,7 +68,8 @@ issue carries a spec with four parts:
    verdict.
 
 Mechanism-only work (a new data field, a plumbing change with no user-facing feel) stays
-an ordinary issue; it's sequenced inside a slice rather than issued as one.
+an ordinary issue; it's sequenced inside a slice rather than issued as one, so nothing
+ships without a slice that needs it.
 
 **The play-and-tune loop**, for every gameplay/UX constant marked `// TUNABLE` (or this
 project's equivalent convention):
@@ -85,8 +86,11 @@ project's equivalent convention):
 
 **The Fable-tier (judgment-tier) placement rule.** A judgment-tier model — the
 strongest available, spent sparingly — touches documents and verdicts only: it never
-writes code and never runs a long or unbounded play session. It shows up at exactly
-three moments per wave, cheapest first:
+writes code and never runs a long or unbounded play session. Once, up front, it authors
+the project's creative-direction document — the highest-leverage text in the project,
+because every execution-tier role executes against it — and it is the only role that may
+amend that document afterwards, on an explicit owner ruling. Per wave it then shows up at
+exactly three moments, cheapest first:
 1. **Slice sign-off, before build** — reads the one-page slice spec, answers one
    question (does this have a dramatic shape and a voice, or is it a goal tuple in
    disguise?). Cheapest point to catch the failure mode; always runs.
@@ -97,12 +101,25 @@ three moments per wave, cheapest first:
 3. **Escalation, on flag only** — rules when another agent flags genuine uncertainty;
    this role doesn't go looking for escalations, it responds to a named one.
 
+The lead session does NOT double as this role, even when the lead runs on the same
+judgment tier. The judge is spawned as a fresh subagent per moment, so the owner-facing
+session never carries a verdict's context (and so the judge reaches its ruling without
+the lead's accumulated attachment to what got built).
+
 **Step-down pattern**: run the play-verdict moment (2) every wave while the model is
 uncalibrated for this project — early waves, a new judgment-tier model, or a project
 just adopting this shape. Once verdicts have proven reliable (the owner's own reaction
-consistently matches the verdict), route moment 2 to on-flag-only, same as escalations,
-and keep only sign-off (1) running every wave. This is a per-project tuning decision to
-revisit explicitly, not a default to assume on day one.
+consistently matches the verdict), route moment 2: run it when the play-testing role
+flags uncertainty, and whenever a slice's identity is at stake — a slice that defines
+what the product feels like keeps its verdict regardless of how calibrated the judge is.
+Sign-off (1) keeps running every wave either way. This is a per-project tuning decision
+to revisit explicitly, not a default to assume on day one.
+
+**Budget shape**: at most two bounded judgment-tier sessions per wave (sign-off plus
+verdict), dropping to roughly one every other wave once moment 2 is routed, plus the
+one-off authoring session for the direction document. Every other role in the wave runs
+a tier below. If a wave needs a third judgment-tier session, that's a signal the slice
+spec was under-specified, not a budget to raise.
 
 ## Agent-session lifecycle
 
