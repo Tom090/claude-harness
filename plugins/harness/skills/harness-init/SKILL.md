@@ -57,10 +57,16 @@ All of these go INTO the target project, not this plugin:
   `.claude/rules/`, don't inline.
 - **`.claude/agents/*.md`**: one file per builder role from step 1, generated from
   `${CLAUDE_PLUGIN_ROOT}/templates/agent-roster/generic-builder.md` (models set
-  explicitly — builders `sonnet`). Do NOT add `reviewer`/`researcher`/`wave-lead` agent
-  files here — those ship with the harness plugin itself and are already spawnable as
-  `harness:reviewer` / `harness:researcher` / `harness:wave-lead` once the plugin is
-  installed; project-local copies would just fork them out of sync with plugin updates.
+  explicitly — builders `sonnet`). Do NOT add `reviewer`/`researcher`/`wave-lead`/
+  `creative-director` agent files here — those ship with the harness plugin itself and
+  are already spawnable as `harness:reviewer` / `harness:researcher` /
+  `harness:wave-lead` / `harness:creative-director` once the plugin is installed;
+  project-local copies would just fork them out of sync with plugin updates. Unlike the
+  other three, `creative-director` is opt-in: only wire it into the project's `CLAUDE.md`
+  roster (and generate the project-local design-authoring roles it judges) if the project
+  is adopting the design-led wave shape from
+  `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Design-led wave shape — it's
+  optional, not part of the default roster.
 - **`.claude/harness.env`**: from `${CLAUDE_PLUGIN_ROOT}/templates/harness.env.example` —
   set real `TEST_COMMAND`/`LINT_COMMAND`/`PROJECT_NAME`/`DEFAULT_BRANCH` for the detected
   stack, and **always set `BUILD_RELEVANT_PATTERNS`** to this stack's source/build paths
