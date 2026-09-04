@@ -44,8 +44,9 @@ claude-harness/
 │   ├── .claude-plugin/plugin.json
 │   ├── skills/         # harness-init, verify-gates, checkpoint, project-status,
 │   │                    # ask-owner, validate, review-pr
-│   ├── agents/         # wave-lead, reviewer, researcher (builder agents are NOT
-│   │                    # shipped here — they're generated per project, see below)
+│   ├── agents/         # wave-lead, reviewer, researcher, creative-director (builder
+│   │                    # agents are NOT shipped here — they're generated per
+│   │                    # project, see below)
 │   ├── hooks/hooks.json  # auto-discovered at this standard path — do NOT also
 │   │                     # declare it in plugin.json (`hooks` there is only for
 │   │                     # ADDITIONAL hook files; declaring the standard one makes
