@@ -69,11 +69,17 @@ issue carries a spec with five parts:
    feel gate is separate and additive — a named play-testing agent plays it and states,
    in its own words, what happened and how it felt, and then the judgment-tier role's
    verdict.
-5. **Mechanics ledger** — the mechanic (or system) this slice requires the player to
-   master, and which already-mastered mechanic(s) from prior slices it depends on
-   staying intact. This is what § Headless systems verification's mastery principle
-   checks against; a slice with nothing new to master and nothing prior at risk can
-   leave this "none" explicitly rather than omit it.
+5. **Mechanics manifest** — a SET, not a stack: which mechanics this slice enables,
+   which of those it relies on the player having already mastered elsewhere, which are
+   genuinely new here, and which are deliberately ABSENT — not locked, simply never
+   offered, because nothing in this slice supports them (no mining mechanic where there
+   is nothing to mine). Progression across slices is commonly **forked, not linear** —
+   one branch can put combat or monument-building at the centre while other systems
+   recede, and a later slice never assumes it inherits everything every earlier one used
+   (consult your project's own campaign/level-design doc for the concrete shape). This is
+   what § Headless systems verification's mastery principle checks against; a slice with
+   nothing new to master and no absence worth naming can say so explicitly rather than
+   omit the manifest.
 
 Mechanism-only work (a new data field, a plumbing change with no user-facing feel) stays
 an ordinary issue; it's sequenced inside a slice rather than issued as one, so nothing
@@ -120,24 +126,35 @@ before any play-testing role runs:
   tier (§ Model policy): the harness's author and the harness's judge are the same role
   here only because the harness IS the judgment instrument, not the thing being judged.
 
-**The mastery principle.** In a project built as a sequence of mechanics — each slice
-teaches the player one new system on top of what they already know — the highest-value
-thing the harness verifies is not any one mechanic alone but whether they *compose*:
-does what the player already mastered still work once a new mechanic is layered on top,
-and does the new mechanic actually matter (is it required to succeed, not a decoration a
-policy can ignore)? Concretely:
+**The mastery principle.** Progression across a project's slices is commonly **forked,
+not a linear stack** — one branch can put combat or monument-building at the centre
+while other systems recede; a mechanic exists only where a slice's manifest (above)
+supports it, and its absence elsewhere is a design choice, not a locked door. So the
+highest-value thing the harness verifies is never "does everything that ever existed
+still work" — it's scoped to exactly what each slice's own manifest claims: do the
+mechanics it relies on compose correctly, does the mechanic it introduces actually
+matter, and does the mechanic it declares absent stay absent. Concretely:
 
 - The harness's scripted player policies are **mission-agnostic machinery** — generic
   actions ("address a shortage," "cover an unserved area," "respond to a triggering
   event") driven by mission-specific triggers and config, never mission-specific
-  building types or numbers hardcoded into the policy executor. This is what lets the
-  SAME policies that won a prior slice be pointed at a new one as a standing regression
-  check, rather than rewritten per slice.
-- On a slice whose ledger (above) names a new mechanic, the systems-integrator's report
-  states two things explicitly: do the prior slice's winning policies still win here
-  (mastery preserved — nothing the player already learned silently broke), and is the
-  new mechanic actually necessary to win (a policy that ignores it should fail to win,
-  not succeed anyway)? A report that skips either question is incomplete, not just thin.
+  building types or numbers hardcoded into the policy executor. This is what lets a
+  policy that mastered a mechanic in one slice be pointed at another slice that also
+  relies on that same mechanic, as a standing regression check — never "run every prior
+  slice's policy against every new one," only the ones the new slice's manifest actually
+  claims.
+- On a slice whose manifest names a mechanic it relies on having been mastered, the
+  systems-integrator's report states: do the policies that mastered it elsewhere still
+  win the parts of THIS slice that depend on it? On a slice whose manifest names a
+  mechanic as new, the report states: is it actually necessary to win (a policy that
+  ignores it should fail to win, not succeed anyway)? A report that skips either
+  question, for a slice whose manifest claims it, is incomplete, not just thin.
+- **Absence is asserted, not assumed.** For every mechanic a slice's manifest marks
+  absent, the harness asserts two things: a policy that attempts it is refused by the
+  underlying system (not silently ignored), and the interface never offers it as an
+  option at all (not merely locked-and-visible) — the same principle as refusing an
+  action outright at the point it becomes invalid rather than leaving it visibly
+  available but non-functional, generalised here to whole mechanics.
 
 **The Fable-tier (judgment-tier) placement rule.** A judgment-tier model — the
 strongest available, spent sparingly — touches documents and verdicts only: it never
