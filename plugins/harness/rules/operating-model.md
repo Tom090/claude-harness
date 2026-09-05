@@ -47,14 +47,17 @@ is good to use/play/read — most commonly games and other experience-driven pro
 Adopt it deliberately (it adds roles and a slower gate before build); the plain
 issue → builder → reviewer → merge loop above stays the default for everything else.
 
-**The wave shape**: design → sign-off → build → tune → experience report → verdict →
-owner build. A design-authoring role writes the spec, a judgment-tier role (see below)
-signs off before any code is written, builders build it, a tuning pass adjusts the
-constants by playing the result, a play-testing role writes up what happened, the
-judgment-tier role rules on it, and the owner gets a working build every wave.
+**The wave shape**: design → sign-off → build → headless systems verification → tune →
+experience report → verdict → owner build. A design-authoring role writes the spec, a
+judgment-tier role (see below) signs off before any code is written, builders build it,
+a systems-integrator role gates the build on a headless verification harness (see
+§ Headless systems verification, below — it sits before tuning and before any
+play-testing role runs), a tuning pass adjusts the constants by playing the result, a
+play-testing role writes up what happened, the judgment-tier role rules on it, and the
+owner gets a working build every wave.
 
 **Unit of work: the experience slice.** An issue is still the queue item, but a slice
-issue carries a spec with four parts:
+issue carries a spec with five parts:
 1. **Pillar/goal served** — which product-vision pillar this slice exists for.
 2. **Player/user-experience goal**, one sentence, about the *feeling* produced, not the
    mechanics implemented (e.g. "the player does X because they just watched Y" reads
@@ -66,6 +69,11 @@ issue carries a spec with four parts:
    feel gate is separate and additive — a named play-testing agent plays it and states,
    in its own words, what happened and how it felt, and then the judgment-tier role's
    verdict.
+5. **Mechanics ledger** — the mechanic (or system) this slice requires the player to
+   master, and which already-mastered mechanic(s) from prior slices it depends on
+   staying intact. This is what § Headless systems verification's mastery principle
+   checks against; a slice with nothing new to master and nothing prior at risk can
+   leave this "none" explicitly rather than omit it.
 
 Mechanism-only work (a new data field, a plumbing change with no user-facing feel) stays
 an ordinary issue; it's sequenced inside a slice rather than issued as one, so nothing
@@ -83,6 +91,53 @@ project's equivalent convention):
    another pass. **Three passes is the cap per wave** — past that, the slice gets
    redesigned rather than re-tuned a fourth time; a constant that won't converge in
    three passes is usually evidence the beat itself is wrong, not the number.
+
+## Headless systems verification (the harness gate)
+
+Correctness tests passing per-module is not the same as the SYSTEMS working together —
+a real case: every module in a build passed its own unit tests and a code review, and
+the build still shipped a city where food never reached half the houses, the top
+progression tier was unreachable by construction, and a core threat system had been
+silently tuned to near-zero, because nobody had run the whole system together over a
+long multi-mechanic session; one headless run found every one of those in twenty
+minutes, where a bounded browser play-test session had found none of them. A
+**systems-integrator** role (judgment tier — see § Model policy) owns a project's
+headless systems-verification harness (in a game, this is a *playability harness* that
+scripts player policies through the public API rather than a fixed, hand-placed
+scenario) and gates on it, sitting in the wave shape after build, before tuning and
+before any play-testing role runs:
+
+- Runs the harness on every PR that touches a mechanism it covers, and again on the
+  merged main before a play-testing role starts — headless is strictly cheaper than a
+  browser session and finds integration bugs a screenshot-bounded play session structurally
+  can't (it only samples one path).
+- Writes a dated integration report naming every failing invariant with the exact code
+  path, one finding per line — it does **not** fix the modules itself; it routes fixes to
+  the owning builder role, the same review-and-fix boundary as the code reviewer but for
+  systems-level findings instead of style/correctness ones.
+- May extend the harness itself (new invariants, new scripted policies, new scenarios)
+  but never edits the modules under test — same self-enhancement guard as the judgment
+  tier (§ Model policy): the harness's author and the harness's judge are the same role
+  here only because the harness IS the judgment instrument, not the thing being judged.
+
+**The mastery principle.** In a project built as a sequence of mechanics — each slice
+teaches the player one new system on top of what they already know — the highest-value
+thing the harness verifies is not any one mechanic alone but whether they *compose*:
+does what the player already mastered still work once a new mechanic is layered on top,
+and does the new mechanic actually matter (is it required to succeed, not a decoration a
+policy can ignore)? Concretely:
+
+- The harness's scripted player policies are **mission-agnostic machinery** — generic
+  actions ("address a shortage," "cover an unserved area," "respond to a triggering
+  event") driven by mission-specific triggers and config, never mission-specific
+  building types or numbers hardcoded into the policy executor. This is what lets the
+  SAME policies that won a prior slice be pointed at a new one as a standing regression
+  check, rather than rewritten per slice.
+- On a slice whose ledger (above) names a new mechanic, the systems-integrator's report
+  states two things explicitly: do the prior slice's winning policies still win here
+  (mastery preserved — nothing the player already learned silently broke), and is the
+  new mechanic actually necessary to win (a policy that ignores it should fail to win,
+  not succeed anyway)? A report that skips either question is incomplete, not just thin.
 
 **The Fable-tier (judgment-tier) placement rule.** A judgment-tier model — the
 strongest available, spent sparingly — touches documents and verdicts only: it never
