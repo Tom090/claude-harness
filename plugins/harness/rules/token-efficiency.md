@@ -50,3 +50,11 @@ context.
    (an Opus-tier play-tester or equivalent) are bounded by whatever screenshot/session
    budget the wave brief sets — never open-ended, even though their cap is typically
    looser than a judgment-tier verdict's.
+10. **Headless before browser.** A screenshot is never the first instrument for a
+    mechanics question. If a project has a headless systems-verification harness (see
+    `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Headless systems verification),
+    run it before opening a browser at all — a multi-system integration question
+    (does food reach every house, is a progression tier reachable, does a threat system
+    still bite) is answered in seconds headlessly and only obscured by a bounded,
+    single-path browser session. Reach for the browser only for what the harness
+    structurally can't see: pixels, legibility, input feel.
