@@ -21,36 +21,48 @@ context.
    rather than re-fetching docs a delegate already has.
 5. **Terse reports** (the agent definitions set word limits); PR bodies and PR comments
    stay substantive — they are the durable archive.
+6. **State your own token spend in your final report**, one line. This is what makes a
+   wave-lead's per-role token table (see below) a transcription instead of a
+   reconstruction — a table assembled after the fact from memory or a guess is exactly
+   the failure this rule exists to prevent.
 
 ## For the lead / wave-lead
 
-6. **Small issue scope per session** — but batch small RELATED residuals into one
+7. **Small issue scope per session** — but batch small RELATED residuals into one
    issue/branch/PR/review round; the anti-pattern is both the bundled mega-issue AND the
    one-PR-per-nit tail.
-7. **Fix cycles (review-and-fix)**: the reviewer fixes its own mechanical findings on
-   the PR branch, test-first — no separate fix session and no extra verification round
-   (the failing-then-passing test/corpus row IS the verification). Spawn a fresh fix
-   session ONLY for design-level rework the reviewer routes back; seed it with the
-   reviewer's PR comment, never a huge builder transcript. (Measured on a prior
-   project's worst case: 3 fix sessions + 3 verification rounds for findings the
-   reviewer could have patched in-session, roughly 10x the token cost of doing it
-   in-session.)
-8. **Reviews are scoped**: adversarial probing concentrates on changed mechanisms, a
-   single consolidated findings round; not a re-derivation of settled work. Full
-   adversarial depth (own corpus, differential vs the default branch) is for NEW rule
-   families/mechanisms; residual cleanups gate on the permanent test suite.
+8. **Set a per-role token ceiling in the spawn brief itself, before the child starts** —
+   a ceiling broadcast mid-wave does not bind a child already running, it can only apply
+   to the next one you spawn. (Measured failure: a 150k-token ceiling sent mid-wave held
+   for the wave's smaller later issues and did nothing for the sim builders already
+   running, who landed at 2–3x the ceiling each.)
+9. **Assemble the per-role token table from what children already reported**, never by
+   reconstructing it after the fact — see the builder-side rule above requiring every
+   child to state its own spend.
+10. **Fix cycles (review-and-fix)**: the reviewer fixes its own mechanical findings on
+    the PR branch, test-first — no separate fix session and no extra verification round
+    (the failing-then-passing test/corpus row IS the verification). Spawn a fresh fix
+    session ONLY for design-level rework the reviewer routes back; seed it with the
+    reviewer's PR comment, never a huge builder transcript. (Measured on a prior
+    project's worst case: 3 fix sessions + 3 verification rounds for findings the
+    reviewer could have patched in-session, roughly 10x the token cost of doing it
+    in-session.)
+11. **Reviews are scoped**: adversarial probing concentrates on changed mechanisms, a
+    single consolidated findings round; not a re-derivation of settled work. Full
+    adversarial depth (own corpus, differential vs the default branch) is for NEW rule
+    families/mechanisms; residual cleanups gate on the permanent test suite.
 
 ## For judgment-tier and play-testing roles
 
-9. **Screenshot budget.** A screenshot is the most expensive token unit an agent
-   spends — far more than an equivalent amount of text, and it doesn't compress the
-   way prose does. Judgment-tier verdicts (Fable-tier or equivalent — see
-   `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Design-led wave shape) are capped
-   at **≤12 screenshots** per play verdict, one map/level. Execution-tier play sessions
-   (an Opus-tier play-tester or equivalent) are bounded by whatever screenshot/session
-   budget the wave brief sets — never open-ended, even though their cap is typically
-   looser than a judgment-tier verdict's.
-10. **Headless before browser.** A screenshot is never the first instrument for a
+12. **Screenshot budget.** A screenshot is the most expensive token unit an agent
+    spends — far more than an equivalent amount of text, and it doesn't compress the
+    way prose does. Judgment-tier verdicts (Fable-tier or equivalent — see
+    `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Design-led wave shape) are capped
+    at **≤12 screenshots** per play verdict, one map/level. Execution-tier play sessions
+    (an Opus-tier play-tester or equivalent) are bounded by whatever screenshot/session
+    budget the wave brief sets — never open-ended, even though their cap is typically
+    looser than a judgment-tier verdict's.
+13. **Headless before browser.** A screenshot is never the first instrument for a
     mechanics question. If a project has a headless systems-verification harness (see
     `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Headless systems verification),
     run it before opening a browser at all — a multi-system integration question

@@ -21,6 +21,11 @@ Do the following, writing only what is NOT already durable — skip any step wit
 3. **Merged-PR hygiene.** If PRs merged this session and their sessions are retired,
    distill lessons into `.claude/agent-sessions.md` (a few lines each, per its own
    header rules).
+3a. **Carry forward any wave's per-role token table.** If a wave-lead's final report
+    this session included one (see `${CLAUDE_PLUGIN_ROOT}/rules/token-efficiency.md`),
+    fold it into the `docs/decisions.md` entry rather than letting it evaporate with the
+    chat — it's the only per-role cost signal this harness has, and it's cheap to keep
+    once a child has already computed it.
 4. **Commit durable-file changes** (`docs/decisions.md`, `.claude/agent-sessions.md`) —
    docs-only commits follow the normal PR flow; batch them with other pending meta
    changes when sensible.

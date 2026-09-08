@@ -16,6 +16,30 @@ triggers: a wave-lead mis-merges (route merges back to the lead, or bump its mod
 mid-wave stall despite turn-discipline rules (add mechanical supervision — see Watchdog
 below — rather than more instructions).
 
+## When a child's report lands on the lead instead of its wave-lead
+
+A child a wave-lead spawned cannot reliably `SendMessage` back to its specific spawner
+(see the wave-lead brief's turn-discipline section) — if the wave-lead ever backgrounds
+a child anyway (a long-running role is not sufficient reason to; see that brief), the
+child's completion can surface to the owner-facing lead session instead, simply because
+the lead is the platform's default landing point when a spawner-specific route doesn't
+exist. A prior project's wave repeatedly hit this and the lead absorbed it silently,
+relaying every result by hand for the rest of the wave — which defeats the entire point
+of delegating wave orchestration in the first place, and the lead's context grew exactly
+as fat as if it had run the wave itself.
+
+If this happens to you as the lead, don't quietly become the orchestrator. First,
+`ListAgents`/`TaskList` to check whether the wave-lead session is still alive:
+- **Alive**: `SendMessage` the stray report into the wave-lead session and let it
+  resume driving the wave — you are a relay for one message, not a replacement
+  orchestrator.
+- **Dead or stale**: apply the fence-before-replace protocol below, seed the
+  replacement wave-lead with the stray report plus durable state (it did not lose the
+  work, just the session that was going to write it up), and record the incident in the
+  wave's final report — this is a recovery, not the normal shape of a wave, and if it
+  keeps recurring the wave-lead brief's foreground-only rule needs to be enforced harder,
+  not routed around.
+
 ## Issues are the queue
 
 All work is tracked in issues. Branch per issue (`feat/<issue#>-<slug>`), PR with
