@@ -29,6 +29,15 @@ For each PR (`gh pr view <n> --json files,title,body`):
    CLAUDE.md / rules), re-run it and judge the actual rendered/executed result yourself —
    evidence you haven't reproduced is unreviewed.
 
+Cross-vendor review (if the project has configured one): a same-family reviewer misses
+some fraction of the defects it would have introduced itself — a different vendor's
+model reviewing the same diff catches a different slice. If this project's own rules
+name a cross-vendor review tool/command (check CLAUDE.md and `.claude/rules/` — do not
+assume one exists), run it on the PR diff and fold its findings into your own before the
+consolidated PR comment; do not treat its PASS as sufficient on its own, and do not skip
+your own probing because it ran clean. This stays project-opt-in until a project's own
+decisions record shows the pattern earns a fixed place here.
+
 Fix discipline (what keeps review-and-fix safe):
 - **Test-first**: encode every finding as a failing test/corpus row BEFORE fixing it; the
   passing row is the verification of your fix — there is no second reviewer.

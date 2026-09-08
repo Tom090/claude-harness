@@ -12,10 +12,22 @@ before doing anything — it binds you, along with this plugin's
 `${CLAUDE_PLUGIN_ROOT}/rules/token-efficiency.md`.
 
 Turn discipline — never stall:
-- **Run delegates as foreground (blocking) Agent calls.** The result returns inside your
-  turn; there is never anything to "wait" for. Parallel builders = multiple Agent calls
-  in ONE message (they run concurrently and all return before you continue). Do not use
-  background children or fire-and-forget tasks for wave work.
+- **Run delegates as foreground (blocking) Agent calls, with NO exception for a
+  long-running one.** The result returns inside your turn; there is never anything to
+  "wait" for. Parallel builders = multiple Agent calls in ONE message (they run
+  concurrently and all return before you continue). Do not use background children or
+  fire-and-forget tasks for wave work — not even for a role you expect to run long (a
+  systems-integrator's full playability sweep is the concrete case that broke this: a
+  wave-lead backgrounded it to keep moving, and when it finished, its report had no
+  reliable path back to the wave-lead specifically and surfaced to the owner-facing lead
+  session instead, which then had to relay every result by hand for the rest of the
+  wave). A long foreground call is a long turn, not a stall — that's the fix, not a
+  reason to background it.
+- **A spawned child cannot reliably SendMessage back to you** — treat this as a hard
+  platform constraint, not a rule you're choosing to follow. The ONLY dependable way a
+  child's result reaches you is as the return value of the foreground Agent call that
+  spawned it. If you ever find yourself designing around a child "reporting back" some
+  other way, that's the anti-pattern.
 - **Ending your turn does not pause the wave — it abandons it.** A delegate's result
   never "arrives" after you end your turn unless a live harness-tracked background child
   exists to re-invoke you. If you followed the rule above, none does.
@@ -38,12 +50,19 @@ Orchestration:
   no two sessions share a checkout (see operating-model.md, Git isolation). If your
   brief carries a wave token, include it in every message you send a child. Never
   re-derive settled work; cite `${CLAUDE_PLUGIN_ROOT}/rules/token-efficiency.md`.
+- **Put the per-role token ceiling in the spawn brief itself, before the child starts.**
+  A ceiling announced mid-wave does not bind a builder already running — it can only
+  apply to children you haven't spawned yet. If you need to tighten the budget partway
+  through a wave, it takes effect on the NEXT spawn, not the current one.
 - Code PRs gate on the `harness:reviewer` agent (review-and-fix, see
   `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md`); meta/docs-only PRs you may merge
   yourself once tests/lint are green.
 - Before any merge: CI checks green, reviewer sign-off comment present on the final
   head, UI/behavior changes carry whatever verification evidence this project's rules
   require.
+- **Re-read CLAUDE.md and this file at every PR boundary**, not just once at wave start —
+  a long wave's early rules decay in practice well before its later PRs land; a fresh
+  re-read per boundary is cheap and re-anchors it.
 
 Stale-wake guard:
 - If you wake to a queued message after a long quiet gap (stream death, laptop sleep),
@@ -69,3 +88,7 @@ Reporting style (token discipline):
 - No narration between tool calls; interim commentary is read by no one.
 - Final report ≤150 words, facts only: PRs merged (numbers), issues closed, rulings
   taken (and via which channel), anything routed back or left undone, blockers.
+- **Include a per-role token table** (role → tokens spent, one line each) every time —
+  every child's own final report states its spend (see
+  `${CLAUDE_PLUGIN_ROOT}/rules/token-efficiency.md`), so assembling this is transcribing
+  numbers you already have, not reconstructing them after the fact.
