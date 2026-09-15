@@ -4,24 +4,16 @@ description: Build, lint, and test the project before opening a PR.
 ---
 # Validate
 
-Read `.claude/harness.env` (written by `/harness:harness-init`) for `TEST_COMMAND` and
-`LINT_COMMAND` and run them:
+Read `.claude/harness.env` for `TEST_COMMAND` and `LINT_COMMAND` and run them. Run
+`LINT_COMMAND` only if `TEST_COMMAND` does not already contain it.
 
 ```bash
 # shellcheck disable=SC1091
 source .claude/harness.env 2>/dev/null
-eval "$TEST_COMMAND"
-[ -n "${LINT_COMMAND:-}" ] && eval "$LINT_COMMAND"
+eval "$TEST_COMMAND" 2>&1 | tail -40
+case "$TEST_COMMAND" in *"$LINT_COMMAND"*) ;; *) [ -n "${LINT_COMMAND:-}" ] && eval "$LINT_COMMAND" 2>&1 | tail -20 ;; esac
 ```
 
-If `.claude/harness.env` doesn't exist yet, this project hasn't been bound — run
-`/harness:harness-init` first, or fall back to whatever this stack's obvious test/lint
-commands are (`./gradlew testDebugUnitTest lintDebug`, `npm test && npm run lint`,
-`cargo test && cargo clippy`, `pytest && ruff check`, ...) and tell the user
-`harness.env` is missing.
-
-If the lint command supports auto-fix (`spotlessApply`, `eslint --fix`, `cargo fmt`,
-`ruff check --fix`), apply it and re-run before reporting.
-
-Report PASS/FAIL with the key errors, quietly (pipe verbose output through `tail -40` —
-see `${CLAUDE_PLUGIN_ROOT}/rules/token-efficiency.md`). Do not open a PR until this passes.
+If `harness.env` is missing, run the stack's obvious test and lint commands and say the
+file is missing. If lint supports auto-fix, apply it and re-run. Report PASS or FAIL with
+the key errors only. Do not open a PR until this passes.
