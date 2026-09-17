@@ -26,6 +26,13 @@ Branch per issue; PR closes the issue; nobody commits code to the default branch
 
 ## Design before build
 
+- **Two loops, never mixed.** An investigation (why does the system do this?) goes to a
+  measuring role with a token ceiling, told to stop at the first measured red and report
+  the binding link; only then is a build briefed. An investigation is never briefed to a
+  builder as part of a build.
+- **The project has an instrument**: one command that replays a real input headlessly
+  and prints what every actor did. A project without one has that as its first issue;
+  every "why" question is otherwise a bespoke probe and reasoning from code replaces it.
 No mechanism is briefed until a composition experiment has run: the measured failure on
 the project's reference fixtures, the smallest prototype, a control, the supported
 domain, the visible signal and the recovery. A prose rule without one is a proposal.
@@ -35,8 +42,10 @@ attempt until a model exists.
 
 ## Review
 
-- A second-vendor read-only review per PR (`codex exec review --base main`); the builder
-  fixes its confirmed findings; the lead triages the rest in the PR body, one line each.
+- When a second vendor is configured (optional; `rules/second-vendor.md`), it reads every
+  PR read-only (`codex exec review --base main`); the builder fixes its confirmed findings;
+  the lead triages the rest in the PR body, one line each. Without one, the per-wave pass
+  below is the only review and per-PR probes are used more freely.
 - One strongest-model review-and-fix pass per wave over the merged diff, before the owner
   plays: mechanical fixes land test-first on a branch; only design-level rework routes
   back to a builder. Per-PR probes only for a PR that makes a mechanism claim or
@@ -65,7 +74,9 @@ out under load is retried once, not diagnosed.
 - Resume a reviewer within a PR; spawn fresh for a new PR, seeded with the distilled
   notes in `.claude/agent-sessions.md`. Retire sessions on merge and distill a few lines.
 - Builders: a fast capable model at high effort, or the second vendor's CLI in a
-  workspace-write worktree, routed on the project's scorecard. Reviewer and judgment
+  workspace-write worktree. **Routing cites the scorecard** (`docs/review/model-scorecard.md`,
+  one row per PR, tokens metered by the harness); a routing decision with no row behind it
+  is a guess. The lead reads it at every checkpoint. Reviewer and judgment
   roles: the strongest model, spent on verdicts, not volume. A judge never authors what
   it judges.
 - Spawn every git-mutating delegate in its own worktree; the shared checkout is the

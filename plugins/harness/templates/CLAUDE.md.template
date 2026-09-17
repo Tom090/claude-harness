@@ -26,6 +26,8 @@ Rules only. History and reasons live in `docs/decisions.md`; detail in `docs/` a
   (real inputs replayed) and the fixtures of the link under change. A PR that moves a
   fixture reading states the cause.
 - Run `/harness:validate` before opening a PR.
+- Instrument: `{{INSTRUMENT_COMMAND}}` replays a real input headlessly and prints what
+  every actor did. Every "why" question starts there, not in the code.
 <!-- If the project verifies behaviour by running the app, name the step here and put
      the checklist in `.claude/rules/` (see templates/examples/ux-verification-mobile.md). -->
 
@@ -53,9 +55,12 @@ Rules only. History and reasons live in `docs/decisions.md`; detail in `docs/` a
   scope is agreed.
 - **Design before build.** No mechanism is briefed until a composition experiment has run
   on the project's reference fixtures.
-- **Review shape.** A second-vendor read-only review per PR; the builder fixes its
-  confirmed findings; the lead triages the rest in the PR body. One strongest-model
-  review-and-fix pass per wave over the merged diff before the owner uses it.
+- **Review shape.** One strongest-model review-and-fix pass per wave over the merged
+  diff before the owner uses it. {{SECOND_VENDOR_REVIEW}}
+- **Investigations are not builds.** A "why" goes to a measuring role with a ceiling,
+  told to stop at the first measured red; a build is briefed only after.
+- **Routing cites `docs/review/model-scorecard.md`**: one row per PR, tokens metered by
+  the harness, read at every checkpoint.
 - The full policy is the harness plugin's `rules/operating-model.md`; token discipline is
   its `rules/token-efficiency.md`. Where this file and the plugin disagree, this file wins.
 
@@ -86,6 +91,11 @@ Rules only. History and reasons live in `docs/decisions.md`; detail in `docs/` a
 3. Get `{{DEFAULT_BRANCH}}` usable for the owner, then pick the wave with them.
 `/harness:project-status` automates 1 and 2; `/harness:checkpoint` is the write side.
 {{OWNER_COMMS_LINE}}
+<!-- SECOND_VENDOR_REVIEW, when Codex is configured: "Codex reads every PR read-only
+     (`codex exec review --base {{DEFAULT_BRANCH}}`, model in `.codex/config.toml`); the
+     builder fixes its confirmed findings; the lead triages the rest in the PR body. A PR
+     body with no Codex section is not ready to merge." Otherwise: "No second vendor is
+     configured." -->
 <!-- OWNER_COMMS_LINE, when the Telegram bridge is set up: "The owner reads Telegram:
      every question for them goes through `/harness:ask-owner`, with one line of
      context, numbered options and a default on timeout." -->

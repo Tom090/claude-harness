@@ -10,7 +10,8 @@ builder context on a prior project.
 2. Grep first, then read with offset and limit. Never whole-file-read a large corpus,
    test or lock file. Never re-read a file you just edited.
 3. Batch independent shell commands; pipe noisy ones through `tail`. Every tool round
-   re-sends the whole context.
+   re-sends the whole context. An agent that runs the system pipes the output to a file
+   and reads the summary, never the stream.
 4. No doc-page fetching for API shapes the brief already gives; ask the lead instead.
 5. Terse reports under the role's word limit; PR bodies stay substantive.
 6. State your own metered token spend in one line at the end of every report. It is a

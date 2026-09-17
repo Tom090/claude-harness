@@ -45,6 +45,11 @@ Check these and report; don't silently continue past a miss:
   2. Quality/deadline posture (affects nothing about model tier — that's fixed policy —
      but may affect how strict the Stop-hook gate should be out of the gate).
   3. Whether the owner wants the Telegram ask-owner loop set up now or later.
+  4. **The instrument**: how to replay a real input headlessly and print what happened
+     (a trace command, a fixture runner). If the project has none, its first issue is
+     to build one; record that.
+  5. **Second vendor**: is OpenAI's Codex CLI available (`command -v codex`)? Optional.
+     On a yes, ask which model tier to default to and generate the bindings below.
 
 ## 2. Generate bindings
 
@@ -52,7 +57,9 @@ All of these go INTO the target project, not this plugin:
 
 - **`CLAUDE.md`**: from `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.template`. Fill every
   `{{PLACEHOLDER}}`. `{{BUILDER_ROSTER}}` is a bullet per generated builder agent (name,
-  model, owned paths). `{{OWNER_COMMS_LINE}}` is the side-channel line given in the
+  model, owned paths). `{{INSTRUMENT_COMMAND}}` is the answer to interview question 4, or
+  "none yet; issue #<n>". `{{SECOND_VENDOR_REVIEW}}` is the per-PR second-vendor line
+  when Codex is configured, else "No second vendor is configured." `{{OWNER_COMMS_LINE}}` is the side-channel line given in the
   template's comment if the Telegram bridge is being set up, else omit it. Rules only,
   under 130 lines: history and reasons go to `docs/decisions.md`, detail to `docs/` and
   `.claude/rules/`.
@@ -82,6 +89,17 @@ All of these go INTO the target project, not this plugin:
   does, append the seed entry.
 - **`.claude/agent-sessions.md`**: seed from
   `${CLAUDE_PLUGIN_ROOT}/templates/agent-sessions.md.template` if it doesn't exist.
+- **`.claude/rules/`**: copy the starter set from `${CLAUDE_PLUGIN_ROOT}/templates/rules/`
+  (`testing.md`, `team-judgment.md`, `systems-modeling.md`), fill the placeholders for
+  this stack, and drop `systems-modeling.md` if the project has no mechanism-shaped
+  problems. Existing files with the same names are left alone.
+- **`docs/review/model-scorecard.md`**: seed from
+  `${CLAUDE_PLUGIN_ROOT}/templates/model-scorecard.md.template`. Routing cites it.
+- **Second vendor, only if step 1 said yes**: `AGENTS.md` from
+  `${CLAUDE_PLUGIN_ROOT}/templates/AGENTS.md.template` (thin: commands and the two or
+  three load-bearing conventions, everything else by pointer) and `.codex/config.toml`
+  from `${CLAUDE_PLUGIN_ROOT}/templates/codex-config.toml.template`. The operational
+  facts are in `${CLAUDE_PLUGIN_ROOT}/rules/second-vendor.md`; do not restate them.
 - **`docs/roadmap.md`**: a short phase skeleton if the project wants one (optional —
   skip if the interview says no phased roadmap is wanted).
 
