@@ -1,0 +1,19 @@
+# Model scorecard
+
+One row per PR. The lead routes issues on this table and re-routes between checkpoints on
+the record so far, stating why in the issue. Tokens are metered by the harness from the
+task result, never self-reported. A routing decision that does not cite a row is a guess.
+
+Columns: **builder** is model and effort (or the second vendor's CLI). **launch→PR** and
+**PR→merge** are wall-clock. **rework** is rounds routed back to the builder. **reviewer**
+findings are blocking / mechanical (fixed on the branch) / routed. **2nd vendor** findings
+are found / confirmed by the builder.
+
+| PR | issue | builder | tokens (metered) | launch→PR | PR→merge | rework | reviewer b/m/r | 2nd vendor f/c | note |
+|---|---|---|---|---|---|---|---|---|---|
+| | | | | | | | | | |
+
+## Readings
+
+<!-- One dated paragraph per checkpoint: what the rows since the last reading say about
+     routing, and what changed as a result. A reading names the rows it rests on. -->

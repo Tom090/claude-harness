@@ -1,0 +1,7 @@
+# Codex CLI settings for the second-vendor seat: read-only review per PR by default;
+# builds override sandbox_mode on the command line. Model tiers are an owner ruling:
+# the strongest tier is reserved for owner-invoked escalations such as a process audit.
+model = "{{SECOND_VENDOR_MODEL}}"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+approval_policy = "never"
