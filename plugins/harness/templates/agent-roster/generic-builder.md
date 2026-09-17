@@ -17,6 +17,8 @@ Responsibilities:
 Workflow:
 - Work from a GitHub issue on a branch `feat/<issue#>-<slug>`.
 - Run `/harness:validate` before opening a PR with `closes #<issue>`.
+- If the test suite times out or fails on an unrelated slow test while other agents are
+  running, wait and retry once; do not diagnose infrastructure.
 - Follow `.claude/rules/{{STYLE_RULES_FILE}}`.
 
 Reporting style (token discipline — see the harness plugin's `rules/token-efficiency.md`):

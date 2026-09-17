@@ -1,7 +1,7 @@
 # claude-harness
 
 A portable "agentic harness" for running multi-agent Claude Code projects: a thin
-owner-facing lead, fresh wave-lead delegation per work batch, a review-and-fix reviewer,
+owner-facing lead that runs each wave itself, a review-and-fix reviewer,
 deterministic quality gates (test/lint gate, destructive-command blocker, test-weakening
 diff guard), an optional Telegram bridge to reach a human owner mid-wave, and a
 bootstrap skill that binds all of it into a new (or existing) project in one pass.
@@ -44,7 +44,7 @@ claude-harness/
 │   ├── .claude-plugin/plugin.json
 │   ├── skills/         # harness-init, verify-gates, checkpoint, project-status,
 │   │                    # ask-owner, validate, review-pr
-│   ├── agents/         # wave-lead, reviewer, researcher, creative-director (builder
+│   ├── agents/         # reviewer, researcher, systems-integrator, creative-director (builder
 │   │                    # agents are NOT shipped here — they're generated per
 │   │                    # project, see below)
 │   ├── hooks/hooks.json  # auto-discovered at this standard path — do NOT also
@@ -52,7 +52,7 @@ claude-harness/
 │   │                     # ADDITIONAL hook files; declaring the standard one makes
 │   │                     # the plugin fail to load with "Duplicate hooks file")
 │   ├── scripts/        # stop-test-gate, block-destructive-bash, check-test-weakening,
-│   │                    # telegram-owner, wave-watchdog
+│   │                    # telegram-owner, wave-watchdog, check-citations
 │   ├── rules/           # token-efficiency.md, operating-model.md — reference docs the
 │   │                    # skills/agents cite instead of re-deriving
 │   └── templates/       # what harness-init instantiates into a new project:

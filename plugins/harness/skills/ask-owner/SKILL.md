@@ -16,7 +16,7 @@ reachable on instead — don't stall.
 - One-way `send` for things worth a phone buzz: a wave finished while they're away, a
   release is ready, something broke that they'd want to know about now. Not for routine
   progress — notification fatigue kills the channel.
-- See `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Owner-comms policy: if the
+- See `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Long-running and background work: if the
   owner asked to be updated via this channel, every question meant for them goes through
   it, including routine "what next?" questions at a wave boundary — not just mid-wave
   blockers.

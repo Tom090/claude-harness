@@ -1,6 +1,6 @@
 ---
 name: verify-gates
-description: Standalone synthetic-trigger verification pass for the deterministic gates (stop-test-gate, destructive-bash blocker, test-weakening guard). Run after harness-init, in a FRESH session, and any time the gates themselves change.
+description: Standalone synthetic-trigger verification pass for the deterministic gates (stop-test-gate, destructive-bash blocker, test-weakening guard) plus the plugin citation check. Run after harness-init, in a FRESH session, and any time the gates themselves change.
 ---
 # Verify gates
 
@@ -91,9 +91,15 @@ denied even though the path would otherwise look ordinary. Clean up `$throwaway`
   **expect ADVISORY PASS**.
 - Clean up the scratch branch.
 
+## 4. Plugin citations resolve
+
+Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-citations.sh`. **Expect** `check-citations: OK`.
+Anything else is a plugin bug: a `§` citation pointing at a heading that no longer
+exists in `rules/`, or a reference to a retired role.
+
 ## Report
 
-State PASS/FAIL for each of the three gates with what you actually observed (not "should
+State PASS/FAIL for each of the three gates and the citation check with what you actually observed (not "should
 work" — the point of this skill is real synthetic triggers). Anything that didn't behave
 as documented is a bug in the harness plugin itself, not the project — report it as such
 rather than silently working around it.

@@ -8,10 +8,10 @@ One-time bootstrap. Produces a bound project: `CLAUDE.md`, a builder roster in
 `.claude/agents/`, `.claude/harness.env`, seeded `docs/decisions.md` and
 `.claude/agent-sessions.md`, GitHub scaffolding, and verified gates.
 
-**Complements, does not replace, Claude Code's built-in `/init`.** `/init` owns the
-descriptive half of `CLAUDE.md` (what the repo *is*); this skill owns the prescriptive
-half (the operating model) and only ever generates the descriptive half when nothing
-better already exists.
+**Complements, does not replace, Claude Code's built-in `/init`.** `/init` may refresh
+the descriptive sections of `CLAUDE.md` (what the repo *is*: architecture, commands,
+style); this skill owns the rest (the operating model) and only ever generates the
+descriptive sections when nothing better already exists.
 
 ## 0. Preflight
 
@@ -26,9 +26,10 @@ Check these and report; don't silently continue past a miss:
 ## 1. Interview + detect
 
 - **If `CLAUDE.md` already exists**: read it. Never overwrite it. Merge — add the
-  prescriptive section (roster, gates, workflow) from
-  `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.template` if it's missing, keeping the
-  existing descriptive content as-is.
+  operating-model sections (non-negotiables, how work moves, roles, resuming) from
+  `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.template` if they are missing, keeping the
+  existing descriptive content as-is. Rules only: if the existing file carries history
+  or reasoning, move it to `docs/decisions.md`.
 - **If the repo has code but no `CLAUDE.md`**: run the built-in `/init` first (or, if
   unavailable, do equivalent codebase discovery yourself) and use its output as the
   descriptive input — build/test/lint commands, architecture, conventions. Don't
@@ -50,23 +51,22 @@ Check these and report; don't silently continue past a miss:
 All of these go INTO the target project, not this plugin:
 
 - **`CLAUDE.md`**: from `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.template`. Fill every
-  `{{PLACEHOLDER}}`. `{{BUILDER_ROSTER}}` is a bullet per generated builder agent (name +
-  one-line role). `{{OWNER_COMMS_LINE}}` is the Telegram-policy line from
-  `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Owner-comms policy if the bridge is
-  being set up, else omit it. Keep it under ~200 lines — link to `docs/` and
-  `.claude/rules/`, don't inline.
+  `{{PLACEHOLDER}}`. `{{BUILDER_ROSTER}}` is a bullet per generated builder agent (name,
+  model, owned paths). `{{OWNER_COMMS_LINE}}` is the side-channel line given in the
+  template's comment if the Telegram bridge is being set up, else omit it. Rules only,
+  under 130 lines: history and reasons go to `docs/decisions.md`, detail to `docs/` and
+  `.claude/rules/`.
 - **`.claude/agents/*.md`**: one file per builder role from step 1, generated from
   `${CLAUDE_PLUGIN_ROOT}/templates/agent-roster/generic-builder.md` (models set
-  explicitly — builders `sonnet`). Do NOT add `reviewer`/`researcher`/`wave-lead`/
+  explicitly — builders `sonnet`). Do NOT add `reviewer`/`researcher`/`systems-integrator`/
   `creative-director` agent files here — those ship with the harness plugin itself and
   are already spawnable as `harness:reviewer` / `harness:researcher` /
-  `harness:wave-lead` / `harness:creative-director` once the plugin is installed;
-  project-local copies would just fork them out of sync with plugin updates. Unlike the
-  other three, `creative-director` is opt-in: only wire it into the project's `CLAUDE.md`
-  roster (and generate the project-local design-authoring roles it judges) if the project
-  is adopting the design-led wave shape from
-  `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md` § Design-led wave shape — it's
-  optional, not part of the default roster.
+  `harness:systems-integrator` / `harness:creative-director` once the plugin is
+  installed; project-local copies would just fork them out of sync with plugin updates.
+  The lead session runs each wave itself; no role sits between it and the builders.
+  `creative-director` is opt-in: only wire it into the project's `CLAUDE.md` roster (and
+  generate the project-local design-authoring roles it judges) if the project wants a
+  design-judgment seat; it is not part of the default roster.
 - **`.claude/harness.env`**: from `${CLAUDE_PLUGIN_ROOT}/templates/harness.env.example` —
   set real `TEST_COMMAND`/`LINT_COMMAND`/`PROJECT_NAME`/`DEFAULT_BRANCH` for the detected
   stack, and **always set `BUILD_RELEVANT_PATTERNS`** to this stack's source/build paths
@@ -99,7 +99,7 @@ All of these go INTO the target project, not this plugin:
   Never add a path you didn't just bind yourself, and never script this for another repo.
 - `gh repo create` if there's no GitHub remote — ask private/public via
   AskUserQuestion if not already stated.
-- Labels: `agent:<role>` per generated builder plus `reviewer`/`researcher`/`wave-lead`,
+- Labels: `agent:<role>` per generated builder plus `reviewer`/`researcher`/`systems-integrator`,
   and `type:feedback`.
 - Milestones if a roadmap was seeded (one per phase).
 - Branch protection on the default branch (require PR, no direct pushes) if the repo
@@ -131,7 +131,7 @@ Commit it.
 
 ## Closing notes (tell the user)
 
-- Safe to run `/init` later to refresh the descriptive half of `CLAUDE.md`; the harness
-  operating model lives in `.claude/rules/` and the plugin's own
+- Safe to run `/init` later to refresh the descriptive sections of `CLAUDE.md`; the
+  harness operating model lives in `.claude/rules/` and the plugin's own
   `${CLAUDE_PLUGIN_ROOT}/rules/`, which `/init` does not touch.
 - Restart-then-`/harness:verify-gates` if you haven't already done so this session.

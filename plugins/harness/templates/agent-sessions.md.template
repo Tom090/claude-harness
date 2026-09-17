@@ -4,12 +4,12 @@ Distilled knowledge from retired agent sessions, so new sessions in the same are
 seeded cheaply instead of resuming ever-growing transcripts. The permanent archive is the
 PR comment trail — entries here point at it.
 
-**Policy** (see the harness plugin's `rules/operating-model.md` § Agent-session
-lifecycle): resume a session freely *within* a PR's review/fix cycles; retire it when
+**Policy** (see the harness plugin's `rules/operating-model.md` § Sessions and
+models): resume a session freely *within* a PR's review/fix cycles; retire it when
 the PR merges and distill what it learned here; seed fresh sessions from these notes for
 new PRs in the same area.
 
-Update this file when a PR merges (lead/wave-lead's job). Keep entries short — a few
+Update this file when a PR merges (the lead's job). Keep entries short — a few
 lines each, not a transcript recap.
 
 <!-- Example entry shape:
