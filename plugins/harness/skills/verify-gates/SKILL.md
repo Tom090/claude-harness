@@ -38,6 +38,10 @@ verification. Do not "simplify" them into real force-pushes or real deletions.
   test failing across 3 consecutive blocked turns — the 4th should end with a
   non-blocking WARNING instead of blocking forever. Clean up the state file
   (`$TMPDIR/claude-harness-stop-test-gate/`) and the scratch test afterward.
+- **Also verify the scoped path**: temporarily set
+  `SCOPED_TEST_COMMAND="echo scoped: {files}; false"` in `.claude/harness.env`, change a
+  file matching `BUILD_RELEVANT_PATTERNS`, end the turn. **Expect** a block whose output
+  names that file, quoted, and not `TEST_COMMAND`'s output. Restore the key afterwards.
 - **Also verify the skip path**: with `BUILD_RELEVANT_PATTERNS` set, change only a docs
   file (nothing matching it) — the hook should exit 0 immediately, no test run at all.
   With that key unset the equivalent check is a clean working tree (nothing changed at

@@ -71,6 +71,9 @@ All of these go INTO the target project, not this plugin:
   set real `TEST_COMMAND`/`LINT_COMMAND`/`PROJECT_NAME`/`DEFAULT_BRANCH` for the detected
   stack, and **always set `BUILD_RELEVANT_PATTERNS`** to this stack's source/build paths
   (e.g. `"src/ package.json"`, `"app/ build.gradle.kts gradlew"`, `"src/ Cargo.toml"`).
+  Set `SCOPED_TEST_COMMAND` to the runner's related-tests mode when it has one (vitest
+  `related`, jest `--findRelatedTests`); it is what the per-turn gate runs, so several
+  agents on one machine do not each run the full suite.
   Left empty, the Stop gate runs the full `TEST_COMMAND` at the end of every turn that
   changed *any* file — including docs-only and harness-only sessions. Set
   `PROTECTED_PATHS` too if the interview surfaced a secrets/credentials directory.

@@ -71,7 +71,11 @@ that has this plugin enabled — including ones that haven't been bound yet. Bot
 read `.claude/harness.env` and silently no-op (exit 0, no output) if it's absent, so
 installing the plugin is safe before you've decided anything about a given repo. Once the
 file exists the blocker is live; the Stop gate additionally needs `TEST_COMMAND`, and
-`BUILD_RELEVANT_PATTERNS` is what keeps it off docs-only sessions.
+`BUILD_RELEVANT_PATTERNS` is what keeps it off docs-only sessions. With
+`SCOPED_TEST_COMMAND` set, the per-turn gate runs only the tests related to the session's
+changed files and the full suite runs once, in `/harness:validate`. The Stop hook has an
+explicit ten-minute timeout; Claude Code cancels a hook past its timeout silently, so a
+gate that cannot finish in that time is no gate.
 
 ## Trust model
 
