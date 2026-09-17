@@ -58,7 +58,8 @@ claude-harness/
 │   └── templates/       # what harness-init instantiates into a new project:
 │                        # CLAUDE.md.template, decisions.md.template,
 │                        # agent-sessions.md.template, harness.env.example,
-│                        # model-scorecard, AGENTS.md + codex-config (optional second
+│                        # check-comments.mjs (comment linter, copied into the
+│                        # project), model-scorecard, AGENTS.md + codex-config (optional second
 │                        # vendor), rules/ (starter testing, team-judgment and
 │                        # systems-modeling rules), agent-roster/ (generic-builder.md +
 │                        # specialization notes),
