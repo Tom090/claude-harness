@@ -2,7 +2,7 @@
 # Wave watchdog: mechanical stall detection for background wave sessions.
 #
 # Usage: wave-watchdog.sh <transcript-or-task-output-path>...
-#   The lead (or wave-lead) launches this in the background right after spawning a
+#   The lead launches this in the background right after spawning a
 #   background wave, passing each spawn result's output_file. It exits noisily when a
 #   watched session's whole transcript tree stops growing for >STALE_SECS, which
 #   re-invokes the lead with the alert in the tool result — the mechanical version of

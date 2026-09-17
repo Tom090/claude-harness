@@ -1,6 +1,6 @@
 ---
 name: checkpoint
-description: Pause and distill the lead session's state into durable sources (decisions.md, GitHub issues, session notes), then print a short "where we are / what's next" plan. Run at wave boundaries or whenever the session is getting heavy.
+description: Pause and distill the lead session's state into durable sources (decisions.md, GitHub issues, session notes), then print a short "where we are / what's next" plan. Run at the end of every wave; a lead session is one wave, so the checkpoint is also the session's close.
 ---
 # Checkpoint
 
@@ -14,10 +14,16 @@ Write only what is not already durable; skip any step with nothing new.
    are not filed as issues; an issue is filed only for scope the owner has agreed.
 3. **In-flight work.** A comment on its issue or PR stating exactly where it stands.
 4. **Merged-PR hygiene.** Retired sessions' lessons into `.claude/agent-sessions.md`, a
-   few lines each; per-role token figures from the children's own reports into the
-   decisions entry.
-5. **Commit** the durable files.
-6. **Print the summary**: done this session; in flight; parked (awaiting the owner);
-   next up in priority order; session health and whether to seed a fresh session.
+   few lines each; per-role token figures into the decisions entry, taken from the
+   metered figure in each task result, never from a child's self-report.
+5. **Worktrees.** `git worktree list` against `gh pr list`: name every worktree with no
+   open PR and offer to prune it. Never remove one whose PR is still open.
+6. **Commit** the durable files and push them, so no launched branch carries them.
+7. **Print the summary**:
+   - What the owner can use now: the command to run it, and what changed since they
+     last looked.
+   - Asked of the owner, unanswered: numbered, so the next session opens on them.
+   - Done this session; in flight; parked; next up in priority order.
+   - The session ends here. The next wave starts in a fresh session.
 
 Two to five tool calls plus the summary.

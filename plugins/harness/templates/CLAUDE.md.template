@@ -1,17 +1,11 @@
 # {{PROJECT_NAME}} — project conventions
 
-Read this fully before doing any work. Keep it under ~200 lines — put detail in `docs/`
-and `.claude/rules/`.
+Rules only. History and reasons live in `docs/decisions.md`; detail in `docs/` and
+`.claude/rules/`. Keep this file under 130 lines.
 
-This file has two layers, kept deliberately separate:
-- **Descriptive** (below): what this repo *is* — owned by Claude Code's built-in
-  `/init`, safe to regenerate/refresh later as the codebase changes.
-- **Prescriptive** (further down): the operating model — owned by the harness plugin,
-  thin pointers into `.claude/rules/` and the plugin's own `rules/`, not inline prose.
-  `/init` should not rewrite this section.
-
-<!-- ============================== DESCRIPTIVE ============================== -->
-<!-- Owned by /init. Safe to let /init regenerate this half later. -->
+<!-- The next four sections describe what the repo is. Claude Code's built-in /init may
+     refresh them as the codebase changes. Everything from "Non-negotiables" down is the
+     operating model, owned by the harness; /init does not touch it. -->
 
 ## What this is
 
@@ -21,104 +15,77 @@ This file has two layers, kept deliberately separate:
 
 {{ARCHITECTURE_SUMMARY}}
 
-<!-- e.g.:
-- Layout: `<frontend dir>/` → `<backend dir>/` → `<shared/lib dir>/`.
-- Framework/stack: {{STACK}}.
-- Data/sync: {{DATA_LAYER}}.
--->
+<!-- One bullet per layer or boundary, with the rule that keeps it a boundary, e.g.
+     "`src/core/` — pure domain logic, no I/O; `src/api/` reads it only through
+     `src/core/index.ts`." Boundary detail goes in `docs/architecture.md`. -->
 
 ## Build, test, verify
 
-- Test: `{{TEST_COMMAND}}`
-- Lint: `{{LINT_COMMAND}}`
-- Build: `{{BUILD_COMMAND}}`
-- Always run the `/harness:validate` skill before opening a PR.
-<!-- If this project also verifies UI/behavior changes by actually running the app,
-     describe that step here and reference a rules file for the checklist, e.g.
-     `.claude/rules/ux-verification.md` (see templates/examples/ux-verification-mobile.md
-     for a worked example from a mobile app). -->
+- Test: `{{TEST_COMMAND}}` · Lint: `{{LINT_COMMAND}}` · Build: `{{BUILD_COMMAND}}`.
+- The per-PR gate is the test command. It includes the project's reference fixtures
+  (real inputs replayed) and the fixtures of the link under change. A PR that moves a
+  fixture reading states the cause.
+- Run `/harness:validate` before opening a PR.
+<!-- If the project verifies behaviour by running the app, name the step here and put
+     the checklist in `.claude/rules/` (see templates/examples/ux-verification-mobile.md). -->
 
 ## Code style
 
-- {{CODE_STYLE_SUMMARY}}
-- Details in `.claude/rules/` (add stack-specific style rules there, not here).
+{{CODE_STYLE_SUMMARY}} Comments say why, never history. Details: `.claude/rules/`.
 
-## Gotchas
+## Non-negotiables
 
-{{GOTCHAS}}
-
-<!-- ============================== PRESCRIPTIVE ============================= -->
-<!-- Owned by the harness. Thin pointers only — the substance lives in
-     .claude/rules/ and the harness plugin's own rules/. /init does not touch this. -->
-
-## Domain non-negotiables
-
-<!-- Optional: any invariant that must survive every future change regardless of who's
-     building — a safety layer, a secrets boundary, a compliance rule. Delete this
-     section if the project has none. Keep each bullet to what must never change and
-     why; put mechanism detail in docs/ or .claude/rules/. -->
+<!-- Invariants that survive every change regardless of who builds: a safety layer, a
+     secrets boundary, a compliance rule. One line each, what must never change. Delete
+     the section if the project has none. -->
 
 {{DOMAIN_NON_NEGOTIABLES}}
 
-## GitHub workflow
+## How work moves
 
-- All work is tracked in GitHub issues; issues are the queue.
-- Start a session by reading assigned issues: `gh issue list --label "agent:<you>"`.
-- Branch per issue: `git checkout -b feat/<issue#>-<slug>`; PR with `closes #<issue>`.
-- Never commit to `{{DEFAULT_BRANCH}}` directly. The reviewer agent signs off before merge.
-- See the harness plugin's `rules/operating-model.md` for granularity, review-and-fix,
-  and session-lifecycle policy.
+- **Issues are the queue.** Branch per issue `feat/<issue#>-<slug>`; PR with `closes #n`;
+  never commit code to `{{DEFAULT_BRANCH}}` directly (docs commits by the lead are allowed).
+- **A lead session is one wave**: one observable outcome the owner can use, then a
+  checkpoint, then the session ends. The next wave starts in a fresh session seeded from
+  durable state. The PR count is a cap, never a target.
+- **An owner observation is captured, not acted on.** The lead assesses it, parks it in
+  the checkpoint, and discusses it with the owner. Nothing is filed or launched until the
+  scope is agreed.
+- **Design before build.** No mechanism is briefed until a composition experiment has run
+  on the project's reference fixtures.
+- **Review shape.** A second-vendor read-only review per PR; the builder fixes its
+  confirmed findings; the lead triages the rest in the PR body. One strongest-model
+  review-and-fix pass per wave over the merged diff before the owner uses it.
+- The full policy is the harness plugin's `rules/operating-model.md`; token discipline is
+  its `rules/token-efficiency.md`. Where this file and the plugin disagree, this file wins.
 
-## Agent roles
+## Roles
 
-- **wave-lead** (harness plugin) — orchestrates one delegated wave end-to-end so the
-  owner-facing lead session stays thin.
+- **lead** (this session): owner interaction, creative direction, queue, briefs, merges,
+  checkpoints. Records owner rulings verbatim and labels its own interpretations. Never
+  authors what it judges.
 {{BUILDER_ROSTER}}
-- **reviewer** (harness plugin) — review-and-fix: applies mechanical fixes for its own
-  findings directly on the PR branch, test-first; routes back to a builder only
-  design-level rework. Enforces this file, tests, and lint before merge.
-- **researcher** (harness plugin) — investigates unfamiliar APIs/libraries; writes
-  findings to `docs/research/`.
+- **reviewer** (harness plugin, {{REVIEWER_MODEL}}): one review-and-fix pass per wave;
+  per-PR probes only for a mechanism claim or a disputed measurement.
+- **systems-integrator** (harness plugin, {{REVIEWER_MODEL}}): headless verification,
+  composition experiments, measurement before any mechanism hypothesis. Never fixes
+  modules.
+- **researcher** (harness plugin, {{RESEARCHER_MODEL}}): investigates unfamiliar APIs and
+  libraries; writes findings to `docs/research/`.
+- Builders run on {{BUILDER_MODEL}} at high effort. Set every subagent's model
+  explicitly; give every brief a token ceiling; briefs carry the task, the spec and the
+  claim, never attribution boilerplate.
+- The plugin's rules live in the installed plugin, not this repo. Harness skills and
+  agents get the path substituted; from a plain session, locate them with
+  `ls -d ~/.claude/plugins/cache/*/harness/*/rules`.
 
-## Models
+## Resuming (lead)
 
-- **Lead / driver session**: a high-level orchestrator only — owner interaction, queue
-  triage, checkpoints. Delegates wave orchestration to fresh **wave-lead** subagents
-  rather than running waves itself.
-- **Builders**: {{BUILDER_MODEL}}, high reasoning effort.
-- **Reviewer**: {{REVIEWER_MODEL}} — bug-finding is its edge, and it's the safety net
-  for builder output.
-- **Researcher**: {{RESEARCHER_MODEL}}.
-- Token efficiency is a project goal in its own right — see the harness plugin's
-  `rules/token-efficiency.md`; every agent brief should cite it.
-<!-- The harness plugin's own rules (operating-model.md, token-efficiency.md) live inside
-     the installed plugin, not this repo. Harness skills/agents get the absolute path
-     substituted for them; from a plain session, locate them with
-     `ls -d ~/.claude/plugins/cache/*/harness/*/rules` (or the marketplace source
-     directory, if the plugin was installed from a local path). -->
-- **Set every subagent's model explicitly at launch** — the parent session's model does
-  not propagate to an overridden subagent.
-
-## Agent sessions
-
-See `.claude/agent-sessions.md` and the harness plugin's `rules/operating-model.md` §
-Agent-session lifecycle for the resume/retire/distill policy.
-
-## Resuming in a new session (lead)
-
-Work spans many sessions; reconstruct state from durable sources, not chat history. On start:
-1. Read this file and `docs/decisions.md` (the why behind the setup).
-2. `gh issue list --state open` (the queue) · `gh pr list` (in review) · `git log --oneline -12`.
-3. Identify the current phase (`docs/roadmap.md`, if this project uses one) and the next
-   unblocked issue.
-Or run `/harness:project-status` for an automated snapshot. Durable state = GitHub
-issues/PRs + `docs/decisions.md` + this file — keep them current as decisions change.
-The write-side is `/harness:checkpoint`: run it at wave boundaries (post-merge, before a
-new workstream, or when the session is getting heavy) — don't wait to be asked.
+1. Read this file and the top of `docs/decisions.md`.
+2. `gh issue list --state open` · `gh pr list` · `git log --oneline -12`.
+3. Get `{{DEFAULT_BRANCH}}` usable for the owner, then pick the wave with them.
+`/harness:project-status` automates 1 and 2; `/harness:checkpoint` is the write side.
 {{OWNER_COMMS_LINE}}
-
-## Refreshing this file
-
-Safe to run `/init` later to refresh the descriptive half above as the codebase evolves;
-the harness's operating model lives in `.claude/rules/` and the harness plugin's own
-`rules/`, which `/init` does not touch.
+<!-- OWNER_COMMS_LINE, when the Telegram bridge is set up: "The owner reads Telegram:
+     every question for them goes through `/harness:ask-owner`, with one line of
+     context, numbered options and a default on timeout." -->

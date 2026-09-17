@@ -22,5 +22,5 @@ How to specialize, per detected/declared stack:
   agent file rather than folding it into a generic builder — other builders should
   consume it, never restyle inline (mirrors the source project's design-system role).
 - Keep every builder on the same model tier (see the harness plugin's
-  `rules/operating-model.md` § Model policy) — model-tier differences between builders
-  are a cost decision to make deliberately, not a default.
+  `rules/operating-model.md` § Sessions and models) — a different tier for one builder is
+  a routing decision made on the project's scorecard, not a default.

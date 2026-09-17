@@ -6,7 +6,7 @@ description: Review a pull request against the project's standards, review-and-f
 
 Usage: give a PR number. This is the manual/ad-hoc entry point to the same checklist the
 `harness:reviewer` agent runs — see `${CLAUDE_PLUGIN_ROOT}/rules/operating-model.md`
-§ Review-and-fix for the full policy (mechanical fixes land on the branch test-first;
+§ Review for the full policy (mechanical fixes land on the branch test-first;
 only design-level rework routes back to a builder).
 
 ```bash

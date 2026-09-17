@@ -6,8 +6,12 @@ where the two disagree, the project's rulings win.
 ## The lead runs the wave
 
 - The owner-facing lead session orchestrates directly: briefs builders and reviewers,
-  triages, merges, checkpoints. There is no wave-lead. For bounded work whose tool output
-  would bloat the lead, spawn a fork.
+  triages, merges, checkpoints. No role sits between it and the builders.
+- **A lead session is one wave.** Brief, merge, checkpoint, end; the next wave starts in
+  a fresh session seeded from durable state. A session that outlives its wave is the
+  sprawl the flat shape exists to prevent.
+- A fork inherits the lead's whole context, so its cost is the lead's size. Fork early,
+  for bounded work whose tool output would bloat the lead, never as a second lead.
 - The lead holds creative direction. It records owner rulings verbatim, labels its own
   interpretations, and shows an interpretation to the owner before briefing anyone on it.
 - **An owner observation is captured, not acted on.** Assess it, park it in the
@@ -60,7 +64,23 @@ evidence about it: say so rather than reporting a baseline.
   roles: the strongest model, spent on verdicts, not volume. A judge never authors what
   it judges.
 - Spawn every git-mutating delegate in its own worktree; the shared checkout is the
-  lead's. A removed worktree is a lost agent: keep it until the PR merges.
+  lead's.
+- A builder that stalls with an intact uncommitted diff in its worktree is a dead
+  stream, not a hang: resume it by id with "continue from your uncommitted state".
+
+## Worktrees and merges
+
+- A removed worktree is a lost agent: keep it until the PR merges. The checkpoint lists
+  worktrees with no open PR and offers pruning.
+- Never symlink dependencies into a worktree: `git add -A` commits the link.
+- Push the lead's docs commits before any launch, or every branch carries them and
+  conflicts on merge.
+- Every cleanup step is gated on the merged state; a branch is deleted only after its PR
+  reports merged. Merge a stacked PR's base with the branch kept, or the stacked PR closes.
+- `gh pr merge -R <owner>/<repo>` from a worktree; the bare form fails when the main
+  checkout sits on the default branch.
+- Merge on sign-off. A reviewer given a second PR must not wait on the lead's merge of
+  the first.
 
 ## Long-running and background work
 
