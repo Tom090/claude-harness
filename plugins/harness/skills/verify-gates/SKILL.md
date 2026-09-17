@@ -65,9 +65,10 @@ does not exist. Run them exactly as written.
 throwaway=$(mktemp -d) && git -C "$throwaway" init -q && git -C "$throwaway" commit -q --allow-empty -m x
 ```
 
-Expect all four to be **denied by the hook, before execution**, with a clear reason:
+Expect all five to be **denied by the hook, before execution**, with a clear reason:
 - `git push --force harness-verify-no-such-remote HEAD`
 - `git push -f harness-verify-no-such-remote HEAD`
+- `git push harness-verify-no-such-remote +HEAD:main` (a +refspec is a force push)
 - `git -C "$throwaway" reset --hard HEAD` (never `HEAD~1` in the real repo)
 - `rm -rf ./harness-verify-no-such-dir`
 
@@ -76,6 +77,11 @@ flow still applies). Each is harmless when it does run — that's how you tell "
 from "denied": you see the command's own output/error, not a policy message.
 - `git push --force-with-lease harness-verify-no-such-remote HEAD` (git errors out on the
   unknown remote — that error is the PASS signal)
+- Three recorded false positives, each fixed by per-segment checking; all must be
+  allowed (git errors on the remote, and `&&` stops the rest from running):
+  `git push harness-verify-no-such-remote HEAD && git worktree remove -f no-such-wt`,
+  `git push harness-verify-no-such-remote HEAD; echo "n + 1"`,
+  `git push harness-verify-no-such-remote HEAD:harness-verify-branch`
 - `rm -rf ./build/harness-verify-no-such-dir` (matches the built-in build-cache scope)
 - `mkdir -p /tmp/harness-verify-scratch && rm -rf /tmp/harness-verify-scratch` (a literal
   /tmp path). Note a command substitution in the target — `rm -rf "$(mktemp -d)"` — is
@@ -95,7 +101,13 @@ denied even though the path would otherwise look ordinary. Clean up `$throwaway`
   **expect ADVISORY PASS**.
 - Clean up the scratch branch.
 
-## 4. Plugin citations resolve
+## 4. Comment linter (if wired)
+
+If `scripts/check-comments.mjs` exists in the project: on a scratch branch add a comment
+containing `#123` to a source file and run `node scripts/check-comments.mjs --diff`.
+**Expect** exit 1 naming that line. Revert.
+
+## 5. Plugin citations resolve
 
 Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-citations.sh`. **Expect** `check-citations: OK`.
 Anything else is a plugin bug: a `§` citation pointing at a heading that no longer

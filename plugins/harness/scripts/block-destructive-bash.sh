@@ -19,7 +19,7 @@
 # the documented format — see templates/harness.env.example).
 #
 # Denies:
-#   - `git push --force` / `-f` (allows the safer `--force-with-lease`)
+#   - `git push --force` / `-f` / `+refspec` (allows the safer `--force-with-lease`)
 #   - `git reset --hard`
 #   - `rm -rf` (and flag-order/spelling variants) targeting anything OUTSIDE the
 #     build-cache/scratch allowlist above. Bare/ambiguous targets (`rm -rf .`, `~`, `/`,
@@ -94,42 +94,46 @@ print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permission
   exit 0
 }
 
-# --- git push force variants (only --force-with-lease, on its own, is allowed) ---
-# Three ways to force-push, all covered here:
-#   1. --force / -f
-#   2. --force-with-lease PLUS a bare --force — git honours the --force and the lease
-#      does not protect anything, so the lease must not mask the force test. Strip every
-#      --force-with-lease[=<ref>] token FIRST, then test what remains.
-#   3. a `+`-prefixed refspec (`git push origin +main`, `+refs/heads/x:refs/heads/x`) —
-#      a force push with no --force flag anywhere in the command.
-if printf '%s' "$cmd" | grep -Eq '\bgit\b.*\bpush\b'; then
-  push_force_msg="Blocked by harness policy: force-pushing (--force/-f, --force-with-lease combined with --force, or a +refspec) is disallowed. Use --force-with-lease on its own if a force-push is truly required, never on the default branch, and confirm with the owner first."
+# --- git push force variants and git reset --hard: checked PER SEGMENT below ---
+# Only tokens after the `push` (or `reset`) subcommand of a `git` invocation in the SAME
+# shell segment are inspected. Checking the whole command string used to produce three
+# recorded false positives, all fail-closed: a `-f` belonging to a later `git worktree
+# remove -f` or `rm -f` in a chained command; a `+` in prose or arithmetic ("n + 1")
+# after the push; a `HEAD:branch` refspec beside one of those. Per-segment, none apply.
+push_force_msg="Blocked by harness policy: force-pushing (--force/-f, --force-with-lease combined with --force, or a +refspec) is disallowed. Use --force-with-lease on its own if a force-push is truly required, never on the default branch, and confirm with the owner first."
+reset_hard_msg="Blocked by harness policy: git reset --hard discards uncommitted work. Stash (git stash -u) or commit first."
 
-  deleased=$(printf '%s' "$cmd" | sed -E 's/--force-with-lease(=[^[:space:]]*)?//g')
-  if printf '%s' "$deleased" | grep -Eq -- '(--force\b|(^|[[:space:]])-f\b)'; then
-    deny "$push_force_msg"
-  fi
-
-  # +refspec: only inspect tokens AFTER the `push` subcommand, so an unrelated `+` token
-  # earlier in a chained command doesn't false-positive.
-  seen_push=0
-  for tok in $cmd; do
-    if [ "$seen_push" -eq 0 ]; then
-      case "$tok" in
-        push) seen_push=1 ;;
-      esac
+# check_git_segment <token>...: deny() on a force push or hard reset in one segment.
+# Global git options before the subcommand are skipped; -C and -c consume an argument.
+check_git_segment() {
+  local seen_git=0 sub="" expect_arg=0 tok
+  for tok in "$@"; do
+    if [ "$seen_git" -eq 0 ]; then
+      case "$tok" in git|*/git|\\git) seen_git=1 ;; esac
       continue
     fi
-    case "$tok" in
-      +*) deny "$push_force_msg" ;;
+    if [ -z "$sub" ]; then
+      if [ "$expect_arg" -eq 1 ]; then expect_arg=0; continue; fi
+      case "$tok" in
+        -C|-c) expect_arg=1; continue ;;
+        -*) continue ;;
+        *) sub="$tok"; continue ;;
+      esac
+    fi
+    case "$sub" in
+      push)
+        case "$tok" in
+          --force-with-lease|--force-with-lease=*) ;;      # the safe form, on its own
+          --force) deny "$push_force_msg" ;;
+          --*) ;;                                          # any other long option
+          -*f*) deny "$push_force_msg" ;;                  # -f, or -f inside -uf etc.
+          +?*) deny "$push_force_msg" ;;                   # +refspec; a bare + is prose
+        esac ;;
+      reset)
+        case "$tok" in --hard) deny "$reset_hard_msg" ;; esac ;;
     esac
   done
-fi
-
-# --- git reset --hard ---
-if printf '%s' "$cmd" | grep -Eq '\bgit\b.*\breset\b.*--hard\b'; then
-  deny "Blocked by harness policy: git reset --hard discards uncommitted work. Stash (git stash -u) or commit first."
-fi
+}
 
 # --- rm -rf (any flag order/spelling) ---
 # Each shell SEGMENT is analyzed independently, and only a segment whose own command word
@@ -168,6 +172,9 @@ rm_deny_msg="Blocked by harness policy: rm -rf outside the allowed build-cache/s
 # and the outer script then falls through to its own `exit 0` emitting nothing further.
 printf '%s\n' "$segments" | while IFS= read -r segment; do
   [ -n "$segment" ] || continue
+
+  # shellcheck disable=SC2086  # word-splitting is the tokenizer here (set -f is on)
+  check_git_segment $segment
 
   seen_rm=0; has_recursive=0; has_force=0; unsafe=0; found_path=0; endopts=0
 

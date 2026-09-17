@@ -89,6 +89,13 @@ All of these go INTO the target project, not this plugin:
   does, append the seed entry.
 - **`.claude/agent-sessions.md`**: seed from
   `${CLAUDE_PLUGIN_ROOT}/templates/agent-sessions.md.template` if it doesn't exist.
+- **`scripts/check-comments.mjs`**, when `command -v node` succeeds: copy
+  `${CLAUDE_PLUGIN_ROOT}/templates/check-comments.mjs`, fill its `CONFIG` block for the
+  stack (source root, extensions, comment syntax, escape prefix, the rule file it
+  cites), and append `node scripts/check-comments.mjs --diff` to `LINT_COMMAND` (or to
+  `TEST_COMMAND` when lint runs inside it). The `--diff` ratchet fails only on added
+  comment lines, so it is safe on a tree with a backlog; `--report` shows the backlog.
+  Without node, note the linter as unwired in the decisions entry.
 - **`.claude/rules/`**: copy the starter set from `${CLAUDE_PLUGIN_ROOT}/templates/rules/`
   (`testing.md`, `team-judgment.md`, `systems-modeling.md`), fill the placeholders for
   this stack, and drop `systems-modeling.md` if the project has no mechanism-shaped
