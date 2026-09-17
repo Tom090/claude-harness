@@ -5,7 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/stop-test-gate.sh"
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/stop-test-gate.sh",
+            "timeout": 600
           }
         ]
       }

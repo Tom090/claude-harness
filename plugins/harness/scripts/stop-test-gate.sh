@@ -23,7 +23,15 @@
 #
 # .claude/harness.env keys read:
 #   TEST_COMMAND             required. e.g. "./gradlew testDebugUnitTest lintDebug" or
-#                             "npm test && npm run lint" or "cargo test && cargo clippy"
+#                             "npm test && npm run lint" or "cargo test && cargo clippy".
+#                             The full suite; /harness:validate runs it at PR time.
+#   SCOPED_TEST_COMMAND      optional. Run per turn instead of TEST_COMMAND. `{files}` in
+#                             it is replaced by the session's changed, still-existing
+#                             files (those matching BUILD_RELEVANT_PATTERNS when set),
+#                             each shell-quoted; without `{files}` it runs as written.
+#                             Falls back to TEST_COMMAND when the file list is empty.
+#                             This is what keeps N agents on one machine from running
+#                             N full suites at once.
 #   BUILD_RELEVANT_PATTERNS  optional. Space-separated path fragments, matched as fixed
 #                             strings (substring, not glob) against the session's changed
 #                             file paths — "this session touched code worth gating on",
@@ -69,6 +77,7 @@ harness_env_value() {
 }
 
 TEST_COMMAND="$(harness_env_value TEST_COMMAND)"
+SCOPED_TEST_COMMAND="$(harness_env_value SCOPED_TEST_COMMAND)"
 BUILD_RELEVANT_PATTERNS="$(harness_env_value BUILD_RELEVANT_PATTERNS)"
 DEFAULT_BRANCH="$(harness_env_value DEFAULT_BRANCH)"
 [ -n "$TEST_COMMAND" ] || exit 0
@@ -92,17 +101,18 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
   )"
 
   if [ -n "${BUILD_RELEVANT_PATTERNS:-}" ]; then
-    matched=0
-    for pat in $BUILD_RELEVANT_PATTERNS; do
-      if printf '%s\n' "$changed_files" | grep -Fq "$pat"; then
-        matched=1
-        break
-      fi
-    done
-    [ "$matched" -eq 1 ] || exit 0  # nothing relevant changed: skip, don't tax the session
+    relevant_files=""
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      for pat in $BUILD_RELEVANT_PATTERNS; do
+        case "$f" in *"$pat"*) relevant_files="$relevant_files$f"$'\n'; break ;; esac
+      done
+    done <<< "$changed_files"
+    [ -n "$relevant_files" ] || exit 0  # nothing relevant changed: skip, don't tax the session
   else
     # No patterns configured: gate on "did this session change anything at all".
     [ -n "$changed_files" ] || exit 0
+    relevant_files="$changed_files"
   fi
 fi
 # Not a git repo: no changed-file signal to skip on — run the gate (conservative).
@@ -149,7 +159,25 @@ state_file="$state_dir/$key"
 attempts=0
 [ -f "$state_file" ] && attempts=$(cat "$state_file" 2>/dev/null || echo 0)
 
-test_output=$(eval "$TEST_COMMAND" 2>&1)
+# --- Pick the command: the scoped one per turn when configured and there are files to
+# scope to; otherwise the full suite. Deleted files are dropped (a runner cannot select
+# tests for a path that is gone), and every path is single-quoted for the eval.
+gate_cmd="$TEST_COMMAND"
+if [ -n "$SCOPED_TEST_COMMAND" ]; then
+  quoted_files=""
+  while IFS= read -r f; do
+    [ -n "$f" ] && [ -f "$f" ] || continue
+    q=$(printf "%s" "$f" | sed "s/'/'\\\\''/g")
+    quoted_files="$quoted_files'$q' "
+  done <<< "${relevant_files:-}"
+  case "$SCOPED_TEST_COMMAND" in
+    *"{files}"*)
+      [ -n "$quoted_files" ] && gate_cmd="${SCOPED_TEST_COMMAND/\{files\}/$quoted_files}" ;;
+    *) gate_cmd="$SCOPED_TEST_COMMAND" ;;
+  esac
+fi
+
+test_output=$(eval "$gate_cmd" 2>&1)
 test_status=$?
 
 if [ "$test_status" -eq 0 ]; then
@@ -161,13 +189,13 @@ attempts=$((attempts + 1))
 echo "$attempts" > "$state_file"
 
 if [ "$attempts" -gt 3 ]; then
-  echo "WARNING (stop-test-gate): '$TEST_COMMAND' still failing after 3 blocked stops. Letting the session end anyway (loop guard) — do NOT open a PR until this is green." >&2
+  echo "WARNING (stop-test-gate): '$gate_cmd' still failing after 3 blocked stops. Letting the session end anyway (loop guard) — do NOT open a PR until this is green." >&2
   rm -f "$state_file" 2>/dev/null
   exit 1
 fi
 
 {
-  echo "BLOCKED: '$TEST_COMMAND' failed (attempt $attempts/3). Fix the failure before finishing this turn."
+  echo "BLOCKED: '$gate_cmd' failed (attempt $attempts/3). Fix the failure before finishing this turn."
   echo "$test_output" | tail -60
 } >&2
 exit 2

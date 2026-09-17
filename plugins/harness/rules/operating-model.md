@@ -53,6 +53,11 @@ per-PR gate; a sweep runs, if at all, once at wave end on the merged default bra
 never beside other runs. A sweep that cannot reach the mechanism under change is not
 evidence about it: say so rather than reporting a baseline.
 
+The Stop gate runs the scoped test command per turn; the full suite runs once per PR, in
+validate. Keep gate-running agents on one machine to four or five: N full suites at once
+slow every one of them and put every builder into timeout diagnosis. A suite that times
+out under load is retried once, not diagnosed.
+
 ## Sessions and models
 
 - Set every subagent's model explicitly; give every brief a token ceiling; briefs carry
