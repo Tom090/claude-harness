@@ -1,0 +1,32 @@
+# AGENTS.md
+
+You are a second-vendor CLI working in this repository. **`CLAUDE.md` is the canonical
+operating guide and `.claude/rules/*.md` are the rules.** Read them in full before
+anything else: `CLAUDE.md`, then every file in `.claude/rules/`. Nothing is duplicated
+here on purpose, so this file cannot drift from them. If you cannot read those files,
+stop and say so; do not proceed from memory or from this file alone.
+
+Build: `{{BUILD_COMMAND}}` · Test: `{{TEST_COMMAND}}` · Lint: `{{LINT_COMMAND}}`.
+Your read-only checkout has no dependencies installed, so you cannot run these; say so
+rather than reporting a pass.
+
+Load-bearing conventions, in one line each:
+{{LOAD_BEARING_CONVENTIONS}}
+
+## Your seats
+
+- **Second reviewer (default).** `codex exec review --base {{DEFAULT_BRANCH}}`, read-only.
+  A same-vendor reviewer runs probes; you read. Concentrate on correctness bugs a
+  same-family reviewer is statistically more likely to miss, and on the testing rules
+  (a reading pinned outside a golden file, a floor with no derivation, a test title
+  narrating history). Your findings are triaged one by one in the PR body.
+- **Adversarial reader**, when briefed: a model document or an issue's mechanism
+  hypothesis, before anyone builds against it. The question is what would falsify it
+  and whether that has been measured.
+- **Builder**, only when the brief says so and names the branch and worktree. Then the
+  builder rules in `CLAUDE.md` apply to you exactly as to any other builder. You cannot
+  commit from your sandbox: leave the diff in the worktree and report; the lead commits,
+  pushes and opens the PR naming you as builder.
+
+In every seat, report which rule files you actually read, so the lead can tell a read
+review from a guess.

@@ -53,12 +53,16 @@ claude-harness/
 │   │                     # the plugin fail to load with "Duplicate hooks file")
 │   ├── scripts/        # stop-test-gate, block-destructive-bash, check-test-weakening,
 │   │                    # telegram-owner, wave-watchdog, check-citations
-│   ├── rules/           # token-efficiency.md, operating-model.md — reference docs the
-│   │                    # skills/agents cite instead of re-deriving
+│   ├── rules/           # operating-model.md, token-efficiency.md, second-vendor.md — the
+│   │                    # rules the skills and agents cite instead of re-deriving
 │   └── templates/       # what harness-init instantiates into a new project:
 │                        # CLAUDE.md.template, decisions.md.template,
 │                        # agent-sessions.md.template, harness.env.example,
-│                        # agent-roster/ (generic-builder.md + specialization notes),
+│                        # check-comments.mjs (comment linter, copied into the
+│                        # project), model-scorecard, AGENTS.md + codex-config (optional second
+│                        # vendor), rules/ (starter testing, team-judgment and
+│                        # systems-modeling rules), agent-roster/ (generic-builder.md +
+│                        # specialization notes),
 │                        # examples/ux-verification-mobile.md (a real worked example,
 │                        # not a plugin rule)
 └── README.md
