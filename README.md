@@ -1,6 +1,6 @@
 # claude-harness
 
-A portable "agentic harness" for running multi-agent Claude Code projects: a thin
+A portable agentic harness for running multi-agent Claude Code projects: a thin
 owner-facing lead that runs each wave itself, a review-and-fix reviewer,
 deterministic quality gates (test/lint gate, destructive-command blocker, test-weakening
 diff guard), an optional Telegram bridge to reach a human owner mid-wave, and a
