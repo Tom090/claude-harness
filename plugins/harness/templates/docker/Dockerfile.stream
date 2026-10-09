@@ -4,12 +4,14 @@
 # /opt/claude-harness and loaded with --plugin-dir (committing enabledPlugins in a
 # project's settings does not download a plugin).
 #
-# Adapted from anthropics/claude-code .devcontainer: non-root `node` user, pinned CLI,
+# Adapted from anthropics/claude-code .devcontainer: non-root `node` user, CLI fixed at build time,
 # default-deny egress firewall (scripts/stream-firewall.sh, needs NET_ADMIN + NET_RAW).
 #
 # Build args:
 #   NODE_IMAGE           base image; match the project's .nvmrc major (default node:20)
-#   CLAUDE_CODE_VERSION  pinned CLI version (default: latest)
+#   CLAUDE_CODE_VERSION  CLI version installed at build time (default: latest; a pin is
+#                        for reproducing a problem). Auto-update is off inside the
+#                        container, so `stream.sh build` is how streams get a newer CLI.
 
 ARG NODE_IMAGE=node:20
 FROM ${NODE_IMAGE}
@@ -40,12 +42,13 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} && claude --
 USER root
 COPY . /opt/claude-harness
 RUN chmod +x /opt/claude-harness/scripts/*.sh \
+  && su node -c 'claude --version' | awk '{print $1}' > /opt/claude-harness/.cli-version \
   && echo "node ALL=(root) NOPASSWD: /opt/claude-harness/scripts/stream-firewall.sh" > /etc/sudoers.d/node-firewall \
   && chmod 0440 /etc/sudoers.d/node-firewall
 USER node
 
 # CLAUDE_CONFIG_DIR keeps credentials and transcripts inside the container.
-# DISABLE_AUTOUPDATER pins the CLI. NONESSENTIAL_TRAFFIC drops telemetry and feature
+# DISABLE_AUTOUPDATER keeps the CLI at the build-time version. NONESSENTIAL_TRAFFIC drops telemetry and feature
 # flags (which also flips the -p default permission mode, so the entrypoint always pins
 # one). SPAWN_DEPTH=1 enforces the one-deep spawning rule. BG_WAIT_CEILING=0 lets a
 # stream wait for its own background agents instead of dropping the result at 10 min.

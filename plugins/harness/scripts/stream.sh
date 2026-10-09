@@ -9,7 +9,7 @@
 #   stream.sh status                      every stream's status, container state and PR
 #   stream.sh collect <id> [--wait]       print result.json; --wait blocks until the run ends
 #   stream.sh followup <id> "<message>"   resume the stream's session with a new message
-#   stream.sh stop <id>                   SIGINT (finish the turn), then docker stop after the grace period
+#   stream.sh stop <id>                   SIGINT (ends the run, result recorded), then docker stop after the grace period
 #   stream.sh prune                       remove containers whose PR is merged or closed; keep the rest
 #
 # Config comes from the project's .claude/harness.env (STREAM_* keys, read literally,
@@ -48,8 +48,7 @@ PROJECT_NAME=$(cfg PROJECT_NAME "$(basename "$PROJECT_DIR")")
 RUNS_DIR=$(cfg STREAM_RUNS_DIR ".claude/streams")
 REPO=$(cfg STREAM_REPO "")
 BASE_IMAGE=$(cfg STREAM_BASE_IMAGE "node:20")
-CLI_VERSION=$(cfg STREAM_CLAUDE_VERSION "$(claude --version 2>/dev/null | awk '{print $1}')")
-[ -n "$CLI_VERSION" ] || CLI_VERSION=latest
+CLI_VERSION=$(cfg STREAM_CLAUDE_VERSION "latest")   # a pin is for reproducing a problem, not the default
 default_setup=""; [ -f package-lock.json ] && default_setup="npm ci"
 SETUP_COMMAND=$(cfg STREAM_SETUP_COMMAND "$default_setup")
 MAX_CONCURRENT=$(cfg STREAM_MAX_CONCURRENT 3)
@@ -65,7 +64,7 @@ EXTRA_EGRESS=$(cfg STREAM_EXTRA_EGRESS "")
 MCP_CONFIG=$(cfg STREAM_MCP_CONFIG "")
 COLLECT_TIMEOUT=$(cfg STREAM_COLLECT_TIMEOUT_SECS 28800)
 
-IMAGE="harness-stream:${PROJECT_NAME}-${CLI_VERSION}"
+IMAGE="harness-stream:${PROJECT_NAME}"   # one tag per project; `build` replaces it, `status` shows its CLI version
 SHARED_ENV="$HOME/.config/claude-harness/containers.env"
 PROJECT_ENV="$HOME/.config/${PROJECT_NAME}-harness/containers.env"
 
@@ -88,13 +87,15 @@ check_env_file() {   # <file> <required key>
   return 0
 }
 
+image_cli() { docker run --rm --entrypoint cat "$IMAGE" /opt/claude-harness/.cli-version 2>/dev/null || printf -- '-'; }
+
 cmd_build() {
   docker_up
   echo "stream: building $IMAGE from $BASE_IMAGE with Claude Code $CLI_VERSION (context: $PLUGIN)"
-  docker build -f "$PLUGIN/templates/docker/Dockerfile.stream" \
+  docker build --pull -f "$PLUGIN/templates/docker/Dockerfile.stream" \
     --build-arg "NODE_IMAGE=$BASE_IMAGE" --build-arg "CLAUDE_CODE_VERSION=$CLI_VERSION" \
     -t "$IMAGE" "$PLUGIN" || die "build failed"
-  echo "stream: built $IMAGE"
+  echo "stream: built $IMAGE with Claude Code $(image_cli). Rebuild whenever you want a newer CLI or plugin inside streams."
 }
 
 cmd_launch() {
@@ -128,10 +129,10 @@ cmd_launch() {
   [ "$n" -lt "$MAX_CONCURRENT" ] || die "$n streams active; STREAM_MAX_CONCURRENT=$MAX_CONCURRENT. Collect or stop one first."
   is_active "$id" && die "stream $id is already $(read_status "$id")"
   if docker container inspect "$name" >/dev/null 2>&1; then
-    if [ "$relaunch" -eq 1 ] && [ "$(container_state "$id")" != "running" ]; then
-      docker rm -f "$name" >/dev/null && echo "stream: removed exited container $name"
+    if [ "$relaunch" -eq 1 ]; then   # not active (checked above): idle after done/failed, or exited
+      docker rm -f "$name" >/dev/null && echo "stream: removed container $name ($(read_status "$id"))"
     else
-      die "container $name exists ($(container_state "$id"); status: $(read_status "$id")). stream.sh prune after its PR merges, or pass --relaunch for an exited one."
+      die "container $name exists ($(container_state "$id"); status: $(read_status "$id")). stream.sh prune after its PR merges, or pass --relaunch to archive the run and replace it."
     fi
   fi
   if [ -f "$dir/result.json" ] || [ -f "$dir/stream.jsonl" ]; then
@@ -201,7 +202,7 @@ cmd_status() {
     pr=$(jq -r '.pr_url // "-"' "$(rundir "$id")/result.json" 2>/dev/null || echo '-')
     printf '%-28s %-16s %-10s %-12s %s\n' "$id" "$st" "$cs" "$rs" "$pr"
   done
-  echo "active: $(active_count)/$MAX_CONCURRENT  image: $IMAGE"
+  echo "active: $(active_count)/$MAX_CONCURRENT  image: $IMAGE (Claude Code $(image_cli); host $(claude --version 2>/dev/null | awk '{print $1}'))"
 }
 
 cmd_collect() {
@@ -252,7 +253,8 @@ cmd_stop() {
   local name dir; name="$(cname "$id")"; dir="$(rundir "$id")"
   [ "$(container_state "$id")" = "running" ] || { echo "stream $id: container $(container_state "$id"); nothing to stop"; return 0; }
   if ! is_active "$id"; then echo "stream $id is $(read_status "$id"); container left idling for follow-ups (prune removes it after merge)"; return 0; fi
-  echo "stream: sending SIGINT to $id (finish the turn, write the result); grace ${STOP_GRACE}s"
+  echo "stream: sending SIGINT to $id (ends the run within seconds; the result event records the interruption); grace ${STOP_GRACE}s"
+  : > "$dir/interrupted"
   if ! docker exec "$name" bash -c '[ -f /run/stream/claude.pid ] && kill -INT "$(cat /run/stream/claude.pid)"' 2>/dev/null; then
     docker kill -s INT "$name" >/dev/null 2>&1 || true
   fi

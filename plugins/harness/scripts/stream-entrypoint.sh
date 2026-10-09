@@ -11,6 +11,7 @@
 # Reads ONLY environment (set by stream.sh from the project's harness.env, read literally)
 # and /run/stream (the bind-mounted run dir). Files it writes there:
 #   status          launched | running | followup | done <rc> | failed <rc> | stopped <rc>
+#   interrupted     marker the host writes before SIGINT, so the run ends as `stopped`
 #   stream.jsonl    the stream-json log of every run, appended
 #   result.json     the last run's result event merged with its structured output
 #   prompt.md       the exact prompt sent (preamble + brief)
@@ -87,9 +88,12 @@ write_result() {
 
 finish_run() {
     local rc="$1"
-    if [ "$(cut -d' ' -f1 "$RUN/status" 2>/dev/null)" = "stopped" ]; then
+    # The host's `stop` leaves an `interrupted` marker before sending SIGINT; the CLI
+    # reports an interrupted run as error_during_execution, which is not a failure here.
+    if [ -f "$RUN/interrupted" ] || [ "$(cut -d' ' -f1 "$RUN/status" 2>/dev/null)" = "stopped" ]; then
         write_result "$rc" || true
-        log "stopped by signal (rc $rc)"
+        rm -f "$RUN/interrupted"
+        status "stopped $rc"; log "stopped by signal (rc $rc)"
         return
     fi
     if write_result "$rc"; then

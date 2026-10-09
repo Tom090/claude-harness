@@ -116,7 +116,8 @@ exists in `rules/`, or a reference to a retired role.
 ## 6. Work streams in containers (if `STREAM_*` is configured)
 
 Skip this section when the project has no `STREAM_REPO`/`STREAM_RUNS_DIR` keys or Docker
-is not installed. Prerequisites: Docker running, `bash ${CLAUDE_PLUGIN_ROOT}/scripts/stream.sh build`
+is not installed. The in-container gate checks need `.claude/harness.env` on the branch
+the stream clones (the default branch), or a brief that writes one first. Prerequisites: Docker running, `bash ${CLAUDE_PLUGIN_ROOT}/scripts/stream.sh build`
 done, and the two 0600 env-files present (`stream.sh launch` names them). Every trigger
 needs an open GitHub issue; create one scratch issue per sub-step and close it afterwards.
 Use a short id, e.g. `--slug verify`.
@@ -141,9 +142,11 @@ Use a short id, e.g. `--slug verify`.
   Close the PR unmerged.
 - **Stop.** Launch a brief that will take a while ("explore the repo and summarise every
   file, then finish") and run `stream.sh stop <id>` after the first assistant event
-  appears. **Expect** the run to end within the grace period with a result (SIGINT
-  finishes the turn) and the container still `running` for follow-ups; `status` shows
-  it. `stream.sh prune` must list it as kept (no PR, or PR open).
+  appears. **Expect** the run to end within seconds, `status` = `stopped 0`, a
+  `result.json` with `subtype` `error_during_execution` or `no_result` (an interrupted
+  run has no structured output), and the container still `running`,
+  so a `followup` resumes the same session. `stream.sh prune` must list it as kept (no
+  PR, or PR open).
 - **Follow-up.** On the smoke stream: `stream.sh followup <id> "Reply with state done and
   the token."` then `collect --wait`. **Expect** a second result with the same
   `session_id`.
