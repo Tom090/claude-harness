@@ -113,9 +113,49 @@ Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-citations.sh`. **Expect** `check-c
 Anything else is a plugin bug: a `§` citation pointing at a heading that no longer
 exists in `rules/`, or a reference to a retired role.
 
+## 6. Work streams in containers (if `STREAM_*` is configured)
+
+Skip this section when the project has no `STREAM_REPO`/`STREAM_RUNS_DIR` keys or Docker
+is not installed. The in-container gate checks need `.claude/harness.env` on the branch
+the stream clones (the default branch), or a brief that writes one first. Prerequisites: Docker running, `bash ${CLAUDE_PLUGIN_ROOT}/scripts/stream.sh build`
+done, and the two 0600 env-files present (`stream.sh launch` names them). Every trigger
+needs an open GitHub issue; create one scratch issue per sub-step and close it afterwards.
+Use a short id, e.g. `--slug verify`.
+
+- **Smoke.** Brief: "Print `pwd`, list the loaded plugins from the init event you can
+  see, do not open a PR, and finish with state `done`." Launch with `--max-turns 3`.
+  `stream.sh collect <id> --wait` must return 0 with `result.json` carrying `state: done`,
+  `token_ok: true`, `session_id` equal to the `session` file, and `usage` present. In
+  `stream.jsonl` the `system`/`init` event lists the harness plugin. Inside the container
+  (`docker exec <container> …`): `cat ~/.config/claude-harness/trusted-projects` prints
+  `/workspace`; `env | grep -c ANTHROPIC_API_KEY` prints 0; `curl -sS --max-time 5
+  https://example.com` fails (firewall); `touch /run/stream/probe && stat` on the host
+  side of the run dir shows a fresh mtime (the watchdog reads through the bind mount).
+- **Gates inside the container.** Brief: "Run `git push --force origin HEAD` and report
+  what happened; then add a file `tests/zz-verify.test.js` whose one test fails, and end
+  your turn; then delete it and finish with state `done`." **Expect** a PreToolUse denial
+  from the blocker in `stream.jsonl` (search for `force`), and a Stop-gate block followed
+  by a clean end after the deletion. If the push is not denied, the blocker is advisory
+  under `bypassPermissions`: record that in the report as a harness finding.
+- **Real stream.** A scratch issue "fix a typo in README". **Expect** a PR with the token
+  in its body, `result.json.pr_url` set, state `done`, and `collect --wait` returning 0.
+  Close the PR unmerged.
+- **Stop.** Launch a brief that will take a while ("explore the repo and summarise every
+  file, then finish") and run `stream.sh stop <id>` after the first assistant event
+  appears. **Expect** the run to end within seconds, `status` = `stopped 0`, a
+  `result.json` with `subtype` `error_during_execution` or `no_result` (an interrupted
+  run has no structured output), and the container still `running`,
+  so a `followup` resumes the same session. `stream.sh prune` must list it as kept (no
+  PR, or PR open).
+- **Follow-up.** On the smoke stream: `stream.sh followup <id> "Reply with state done and
+  the token."` then `collect --wait`. **Expect** a second result with the same
+  `session_id`.
+- Clean up: close the scratch issues and PRs, then `docker rm -f` the verify containers
+  by hand (prune keeps containers without a merged PR on purpose).
+
 ## Report
 
-State PASS/FAIL for each of the three gates and the citation check with what you actually observed (not "should
+State PASS/FAIL for each of the three gates, the citation check and (when configured) the stream checks with what you actually observed (not "should
 work" — the point of this skill is real synthetic triggers). Anything that didn't behave
 as documented is a bug in the harness plugin itself, not the project — report it as such
 rather than silently working around it.
