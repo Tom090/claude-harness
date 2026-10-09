@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["issue", "branch", "pr_url", "state", "summary", "token"],
+  "properties": {
+    "issue": { "type": "integer", "description": "The GitHub issue number this stream worked." },
+    "branch": { "type": "string", "description": "The branch the work is on." },
+    "pr_url": { "type": ["string", "null"], "description": "The PR opened for this stream, or null if none was opened." },
+    "state": {
+      "type": "string",
+      "enum": ["done", "blocked", "needs_owner"],
+      "description": "done: PR open and validated. blocked: cannot proceed without a change outside this stream's scope (say what). needs_owner: a question for the owner is in /run/stream/owner-questions.md."
+    },
+    "summary": { "type": "string", "maxLength": 900, "description": "What was done, what was verified, what is left. Under 120 words." },
+    "token": { "type": "string", "description": "The fencing token from the brief, quoted exactly." }
+  }
+}

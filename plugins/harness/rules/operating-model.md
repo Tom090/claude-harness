@@ -104,7 +104,7 @@ out under load is retried once, not diagnosed.
   one level deep; the lead awaits every leaf agent's notification before ending its
   turn. No PreToolUse guard enforces this: the CLI backgrounds every spawn and drops
   the `run_in_background` flag (Claude Code 2.1.283), and the stalls the old guard
-  addressed were a wave-lead nesting failure retired in 0.2.0.
+  addressed were a nesting failure of the two-level shape retired in 0.2.0.
 - Launch `scripts/wave-watchdog.sh` beside any long background delegate; it judges
   staleness over the whole subagent tree.
 - A watchdog alert means "possibly wedged". Never both resume a suspect session and

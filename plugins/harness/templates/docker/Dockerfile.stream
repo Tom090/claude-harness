@@ -1,0 +1,60 @@
+# Image for one harness work stream: a headless Claude Code "stream lead" running the
+# full harness plugin inside a container. Built by `scripts/stream.sh build` with the
+# plugin root as the build context, so the plugin itself is baked in at
+# /opt/claude-harness and loaded with --plugin-dir (committing enabledPlugins in a
+# project's settings does not download a plugin).
+#
+# Adapted from anthropics/claude-code .devcontainer: non-root `node` user, pinned CLI,
+# default-deny egress firewall (scripts/stream-firewall.sh, needs NET_ADMIN + NET_RAW).
+#
+# Build args:
+#   NODE_IMAGE           base image; match the project's .nvmrc major (default node:20)
+#   CLAUDE_CODE_VERSION  pinned CLI version (default: latest)
+
+ARG NODE_IMAGE=node:20
+FROM ${NODE_IMAGE}
+
+ARG CLAUDE_CODE_VERSION=latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git gh jq curl ca-certificates sudo procps less \
+    iptables ipset iproute2 dnsutils aggregate \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Global npm prefix writable by the node user (the CLI is installed there).
+RUN mkdir -p /usr/local/share/npm-global && chown -R node:node /usr/local/share
+
+# Workspace (the stream's own clone), config dir, npm cache mount point, and the
+# harness trust file: the Stop gate only runs TEST_COMMAND for a path listed here.
+RUN mkdir -p /workspace /home/node/.claude /home/node/.npm /home/node/.config/claude-harness \
+  && printf '/workspace\n' > /home/node/.config/claude-harness/trusted-projects \
+  && chown -R node:node /workspace /home/node
+
+USER node
+ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+ENV PATH=$PATH:/usr/local/share/npm-global/bin
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} && claude --version
+
+# The plugin last, so an edit to it does not reinstall the CLI. The sudoers line names
+# the script with no arguments, which lets the entrypoint pass the extra-egress list.
+USER root
+COPY . /opt/claude-harness
+RUN chmod +x /opt/claude-harness/scripts/*.sh \
+  && echo "node ALL=(root) NOPASSWD: /opt/claude-harness/scripts/stream-firewall.sh" > /etc/sudoers.d/node-firewall \
+  && chmod 0440 /etc/sudoers.d/node-firewall
+USER node
+
+# CLAUDE_CONFIG_DIR keeps credentials and transcripts inside the container.
+# DISABLE_AUTOUPDATER pins the CLI. NONESSENTIAL_TRAFFIC drops telemetry and feature
+# flags (which also flips the -p default permission mode, so the entrypoint always pins
+# one). SPAWN_DEPTH=1 enforces the one-deep spawning rule. BG_WAIT_CEILING=0 lets a
+# stream wait for its own background agents instead of dropping the result at 10 min.
+ENV CLAUDE_CONFIG_DIR=/home/node/.claude \
+    DISABLE_AUTOUPDATER=1 \
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
+    CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1 \
+    CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 \
+    DEVCONTAINER=true
+
+WORKDIR /workspace
+ENTRYPOINT ["/opt/claude-harness/scripts/stream-entrypoint.sh", "run"]
