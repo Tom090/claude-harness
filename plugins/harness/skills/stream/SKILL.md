@@ -13,9 +13,11 @@ Policy: `rules/operating-model.md` § Long-running and background work.
 `S="bash ${CLAUDE_PLUGIN_ROOT}/scripts/stream.sh"`. Every subcommand reads the project's
 `.claude/harness.env` (`STREAM_*` keys, `templates/harness.env.example`).
 
-## 0. Once per project (or per CLI/plugin version)
+## 0. Once per project, then whenever a newer CLI or plugin should reach the streams
 
-- Docker running; `$S build` (image `harness-stream:<project>-<cli>`).
+- Docker running; `$S build` (image `harness-stream:<project>`, latest Claude Code at
+  build time; auto-update is off inside containers, so rebuild to move forward).
+  `$S status` shows the image's CLI version beside the host's.
 - The two 0600 env-files exist: `~/.config/claude-harness/containers.env` with
   `CLAUDE_CODE_OAUTH_TOKEN` (`claude setup-token`, printed once, one year) and
   `~/.config/<PROJECT_NAME>-harness/containers.env` with `GH_TOKEN` (a fine-grained PAT on
@@ -51,8 +53,9 @@ Read `result.json` only (`collect` prints it and exits by state):
 - `1` **failed** / `2` **stopped**: read `errors` and the last lines of
   `<run dir>/stream.jsonl` and `stderr.log`. Resume with `followup` (same session) or
   fence it in durable state and `launch --relaunch`; never both.
-- A watchdog STALE on a stream means `$S stop <id>` (SIGINT finishes the turn and writes
-  the result), never a second launch for the same issue.
+- A watchdog STALE on a stream means `$S stop <id>` (SIGINT ends the run within seconds;
+  the container keeps the session for a `followup`), never a second launch for the same
+  issue.
 
 ## 3. Hygiene
 

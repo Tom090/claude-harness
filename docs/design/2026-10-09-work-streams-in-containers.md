@@ -40,8 +40,9 @@ self-hosted version, built from Anthropic's reference devcontainer.
   overrides the OAuth token in `-p` mode.
 - `bypassPermissions` pinned explicitly, as a non-root user, behind a default-deny
   egress firewall; the container plus the firewall is the sandbox.
-- SIGINT finishes the turn and writes the result; SIGTERM drops it. `stop` sends INT
-  first. The container idles after a run so `followup` can resume the same session.
+- SIGINT ends the run within seconds (the CLI records it as an interrupted result);
+  SIGTERM drops it. `stop` sends INT first. The container idles after a run so
+  `followup` can resume the same session, including after a stop.
 - Owner questions go to a file in the run dir and the stream ends with `needs_owner`;
   the host lead relays. One Telegram long-poll per bot rules out polling from inside.
 - Token figures in `result.json` come from the result event, never from the model's

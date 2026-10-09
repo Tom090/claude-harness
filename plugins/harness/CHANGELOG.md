@@ -12,7 +12,8 @@ the entry and in `docs/design/`.
   bind-mounted run dir. Subcommands: build, launch, status, collect, followup, stop,
   prune. Secrets live in two 0600 env-files outside the repo (`CLAUDE_CODE_OAUTH_TOKEN`
   from `claude setup-token`, a repo-scoped `GH_TOKEN`); `ANTHROPIC_API_KEY` is refused.
-- New image template `templates/docker/Dockerfile.stream` (non-root, pinned CLI, egress
+- New image template `templates/docker/Dockerfile.stream` (non-root, latest CLI at build
+  time with auto-update off, egress
   firewall to GitHub, Anthropic and npm, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), the
   result contract `templates/stream-result.schema.json`, and the stream lead's preamble.
 - `rules/operating-model.md`: a lead session is one wave, a stream is one wave in a
