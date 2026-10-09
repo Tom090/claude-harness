@@ -50,6 +50,9 @@ Check these and report; don't silently continue past a miss:
      to build one; record that.
   5. **Second vendor**: is OpenAI's Codex CLI available (`command -v codex`)? Optional.
      On a yes, ask which model tier to default to and generate the bindings below.
+  6. **Streams**: does the owner want work streams in containers (`command -v docker`)?
+     Optional; on a yes, fill the `STREAM_*` keys below and walk through the two
+     env-files.
 
 ## 2. Generate bindings
 
@@ -84,6 +87,16 @@ All of these go INTO the target project, not this plugin:
   Left empty, the Stop gate runs the full `TEST_COMMAND` at the end of every turn that
   changed *any* file — including docs-only and harness-only sessions. Set
   `PROTECTED_PATHS` too if the interview surfaced a secrets/credentials directory.
+  **Streams (interview question 6)**: set `STREAM_REPO` (owner/name), `STREAM_BASE_IMAGE`
+  from `.nvmrc` or the detected runtime (e.g. `node:24`), `STREAM_SETUP_COMMAND` (the
+  install step, e.g. `npm ci`), `STREAM_RUNS_DIR` (and add it to `.gitignore`), and
+  `STREAM_MAX_CONCURRENT` (2 when the Stop gate runs the full suite every turn, else 3).
+  Then tell the owner how to create the two secret files, which no skill writes for
+  them: `claude setup-token` → `CLAUDE_CODE_OAUTH_TOKEN=` in
+  `~/.config/claude-harness/containers.env`; a fine-grained GitHub PAT scoped to this
+  one repo (Contents, Pull requests, Issues: read/write) → `GH_TOKEN=` in
+  `~/.config/<PROJECT_NAME>-harness/containers.env`; both `chmod 600`. Offer
+  `bash ${CLAUDE_PLUGIN_ROOT}/scripts/stream.sh build` once Docker is running.
 - **`docs/decisions.md`**: seed from
   `${CLAUDE_PLUGIN_ROOT}/templates/decisions.md.template` if it doesn't exist; if it
   does, append the seed entry.
@@ -133,7 +146,8 @@ All of these go INTO the target project, not this plugin:
 - Branch protection on the default branch (require PR, no direct pushes) if the repo
   has a remote.
 - Suggest a permissions allowlist for `.claude/settings.json` (safe read-only `gh`/`git`
-  commands, the project's test/lint command) — apply if the interview OK'd it.
+  commands, the project's test/lint command, and `Bash(bash *scripts/stream.sh *)` when
+  streams are on) — apply if the interview OK'd it.
 
 ## 4. Verify the gates — do not skip
 
@@ -147,7 +161,8 @@ hook scripts on every invocation, so a harness.env you just wrote needs no resta
 So: if the plugin was already enabled when this session started, run
 `/harness:verify-gates` now. Otherwise tell the user: "Restart Claude Code in this
 project, then run `/harness:verify-gates`." Either way, do not declare harness-init done
-until that pass has actually run and reported PASS for all three gates.
+until that pass has actually run and reported PASS for all three gates (and §6 when
+streams are configured).
 
 ## 5. Checkpoint
 
