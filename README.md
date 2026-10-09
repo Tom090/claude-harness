@@ -1,10 +1,11 @@
 # claude-harness
 
 A portable "agentic harness" for running multi-agent Claude Code projects: a thin
-owner-facing lead that runs each wave itself, a review-and-fix reviewer,
-deterministic quality gates (test/lint gate, destructive-command blocker, test-weakening
-diff guard), an optional Telegram bridge to reach a human owner mid-wave, and a
-bootstrap skill that binds all of it into a new (or existing) project in one pass.
+owner-facing lead that runs each wave itself, work streams in containers when several
+waves must run at once, a review-and-fix reviewer, deterministic quality gates (test/lint
+gate, destructive-command blocker, test-weakening diff guard), an optional Telegram
+bridge to reach a human owner mid-wave, and a bootstrap skill that binds all of it into a
+new (or existing) project in one pass.
 
 Extracted from a real multi-agent Android/Firebase project after the process had proven
 itself there, then generalized so any project can install it instead of re-deriving the
@@ -43,7 +44,7 @@ claude-harness/
 ├── plugins/harness/
 │   ├── .claude-plugin/plugin.json
 │   ├── skills/         # harness-init, verify-gates, checkpoint, project-status,
-│   │                    # ask-owner, validate, review-pr
+│   │                    # ask-owner, validate, review-pr, stream
 │   ├── agents/         # reviewer, researcher, systems-integrator, creative-director (builder
 │   │                    # agents are NOT shipped here — they're generated per
 │   │                    # project, see below)
@@ -52,7 +53,9 @@ claude-harness/
 │   │                     # ADDITIONAL hook files; declaring the standard one makes
 │   │                     # the plugin fail to load with "Duplicate hooks file")
 │   ├── scripts/        # stop-test-gate, block-destructive-bash, check-test-weakening,
-│   │                    # telegram-owner, wave-watchdog, check-citations
+│   │                    # telegram-owner, wave-watchdog, check-citations,
+│   │                    # stream (host dispatcher), stream-entrypoint + stream-firewall
+│   │                    # (run inside the stream image)
 │   ├── rules/           # operating-model.md, token-efficiency.md, second-vendor.md — the
 │   │                    # rules the skills and agents cite instead of re-deriving
 │   └── templates/       # what harness-init instantiates into a new project:
@@ -64,7 +67,10 @@ claude-harness/
 │                        # systems-modeling rules), agent-roster/ (generic-builder.md +
 │                        # specialization notes),
 │                        # examples/ux-verification-mobile.md (a real worked example,
-│                        # not a plugin rule)
+│                        # not a plugin rule), docker/Dockerfile.stream +
+│                        # stream-result.schema.json + stream-lead-preamble.md (streams)
+├── docs/design/        # why the harness is shaped the way it is
+├── docs/field-feedback/ # dated reports from projects running it
 └── README.md
 ```
 
@@ -92,6 +98,29 @@ its own `harness.env` therefore runs nothing. Both hooks read `harness.env` lite
 (plain `KEY="value"` lines) rather than sourcing it, so no value in it is ever executed as
 shell either. Untrusted projects get a one-per-day notice that the gate is inactive rather
 than silence — an inert gate you believe in is worse than no gate.
+
+## Work streams in containers
+
+One lead session is one wave. When the owner wants several waves at once, each extra
+one runs as a **stream**: a Docker container on the same machine running a headless
+stream lead (`claude -p`) with this plugin inside, on its own clone and branch, with its
+own builders one level deep. The host lead is its dispatcher and reads back only the PR
+and a `result.json`; nothing in-process crosses the container boundary. Prerequisites:
+Docker, `STREAM_*` keys in `.claude/harness.env`, and two 0600 secret files outside the
+repo (`CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`, a repo-scoped `GH_TOKEN`).
+
+```
+S="bash ~/.claude/plugins/cache/claude-harness/harness/<version>/scripts/stream.sh"  # or ${CLAUDE_PLUGIN_ROOT}
+$S build                                        # once per CLI/plugin version
+$S launch --issue 42 --slug entity-dedupe       # brief.md in <STREAM_RUNS_DIR>/42-entity-dedupe/
+$S collect 42-entity-dedupe --wait              # as a background task; prints result.json
+$S followup 42-entity-dedupe "Owner ruling: option 2"
+$S status · $S stop <id> · $S prune
+```
+
+`/harness:stream` is the lead-side workflow; `plugins/harness/rules/operating-model.md`
+§ Long-running and background work is the policy; `docs/design/2026-10-09-work-streams-in-containers.md`
+is the why.
 
 ## Upstreaming improvements
 

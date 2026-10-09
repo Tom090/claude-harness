@@ -16,14 +16,18 @@ Write only what is not already durable; skip any step with nothing new.
 4. **Merged-PR hygiene.** Retired sessions' lessons into `.claude/agent-sessions.md`, a
    few lines each; per-role token figures into the decisions entry, taken from the
    metered figure in each task result, never from a child's self-report.
-5. **Worktrees.** `git worktree list` against `gh pr list`: name every worktree with no
-   open PR and offer to prune it. Never remove one whose PR is still open.
+5. **Worktrees and streams.** `git worktree list` against `gh pr list`: name every
+   worktree with no open PR and offer to prune it. Never remove one whose PR is still
+   open. If the project runs streams, `bash ${CLAUDE_PLUGIN_ROOT}/scripts/stream.sh status`
+   and `… prune`: a stream still active is in-flight work for step 3; prune removes only
+   containers whose PR is merged or closed.
 6. **Commit** the durable files and push them, so no launched branch carries them.
 7. **Print the summary**:
    - What the owner can use now: the command to run it, and what changed since they
      last looked.
    - Asked of the owner, unanswered: numbered, so the next session opens on them.
-   - Done this session; in flight; parked; next up in priority order.
+   - Done this session; in flight (streams by id, with their state); parked; next up in
+     priority order.
    - The session ends here. The next wave starts in a fresh session.
 
 Two to five tool calls plus the summary.

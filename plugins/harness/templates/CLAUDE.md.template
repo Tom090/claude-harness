@@ -50,6 +50,9 @@ Rules only. History and reasons live in `docs/decisions.md`; detail in `docs/` a
 - **A lead session is one wave**: one observable outcome the owner can use, then a
   checkpoint, then the session ends. The next wave starts in a fresh session seeded from
   durable state. The PR count is a cap, never a target.
+- **A stream is one wave in a container** (`/harness:stream`): one issue, one branch, one
+  PR; its PR and `result.json` are the only channel back. Use it for parallel streams,
+  never as a nested agent.
 - **An owner observation is captured, not acted on.** The lead assesses it, parks it in
   the checkpoint, and discusses it with the owner. Nothing is filed or launched until the
   scope is agreed.
